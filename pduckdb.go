@@ -2,6 +2,8 @@ package pduckdb
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"unsafe"
 
@@ -12,7 +14,6 @@ import (
 type DuckDB struct {
 	handle         *byte
 	lib            uintptr
-	sysLib         uintptr
 	connect        func(*byte, **byte) DuckDBState
 	close          func(**byte)
 	query          func(*byte, string, *DuckDBResultRaw) DuckDBState
@@ -31,22 +32,12 @@ type DuckDB struct {
 func NewDuckDB(path string) (*DuckDB, error) {
 	db := &DuckDB{}
 
-	// Load system library for debugging output
-	sysLib, err := purego.Dlopen(getSystemLibrary(), purego.RTLD_NOW|purego.RTLD_GLOBAL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load system library: %w", err)
-	}
-	db.sysLib = sysLib
-
 	// Load DuckDB library
-	lib, err := purego.Dlopen(getDuckDBLibrary(), purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	lib, err := loadDuckDBLibrary()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load DuckDB library: %w", err)
 	}
 	db.lib = lib
-
-	// Register system functions
-	purego.RegisterLibFunc(&db.puts, sysLib, "puts")
 
 	// Register DuckDB functions
 	var open func(path string, out **byte) DuckDBState
@@ -99,24 +90,105 @@ func (db *DuckDB) Close() {
 	db.close(&db.handle)
 }
 
-// Helper functions
-
-func getSystemLibrary() string {
-	switch runtime.GOOS {
-	case "darwin":
-		return "/usr/lib/libSystem.B.dylib"
-	default:
-		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
+// loadDuckDBLibrary attempts to load the DuckDB library from various locations based on the platform
+func loadDuckDBLibrary() (uintptr, error) {
+	// First check if the library path is specified via environment variable
+	if envPath := os.Getenv("DUCKDB_LIBRARY_PATH"); envPath != "" {
+		lib, err := purego.Dlopen(envPath, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		if err == nil {
+			return lib, nil
+		}
+		// If the explicitly provided path fails, return that error directly
+		// as the user would expect the specified library to work
+		return 0, fmt.Errorf("failed to load DuckDB library from DUCKDB_LIBRARY_PATH (%s): %w", envPath, err)
 	}
+
+	// Get platform-specific library paths
+	locations := getLibraryPaths()
+
+	// Try each location
+	var lastErr error
+	for _, location := range locations {
+		lib, err := purego.Dlopen(location, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		if err == nil {
+			return lib, nil
+		}
+		lastErr = err
+	}
+
+	return 0, fmt.Errorf("failed to load DuckDB library from any standard location, last error: %w", lastErr)
 }
 
-func getDuckDBLibrary() string {
+// getLibraryPaths returns a list of paths to search for the DuckDB library based on the platform
+func getLibraryPaths() []string {
+	var locations []string
+
 	switch runtime.GOOS {
 	case "darwin":
-		return "/opt/homebrew/lib/libduckdb.dylib"
-	default:
-		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
+		locations = getMacOSLibraryPaths()
+	case "linux":
+		locations = getLinuxLibraryPaths()
+	case "windows":
+		// Windows standard locations
+		locations = []string{
+			"duckdb.dll", // Current directory
+			filepath.Join(os.Getenv("ProgramFiles"), "DuckDB", "duckdb.dll"),
+			filepath.Join(os.Getenv("ProgramFiles(x86)"), "DuckDB", "duckdb.dll"),
+		}
 	}
+
+	return locations
+}
+
+// getMacOSLibraryPaths returns a list of paths to search for the DuckDB library on macOS
+func getMacOSLibraryPaths() []string {
+	locations := []string{}
+
+	// First check DYLD_LIBRARY_PATH
+	if libPaths := os.Getenv("DYLD_LIBRARY_PATH"); libPaths != "" {
+		for _, path := range filepath.SplitList(libPaths) {
+			locations = append(locations, filepath.Join(path, "libduckdb.dylib"))
+		}
+	}
+
+	// Then add standard macOS locations
+	standardPaths := []string{
+		"/opt/homebrew/lib/libduckdb.dylib",         // Apple Silicon Homebrew
+		"/usr/local/lib/libduckdb.dylib",            // Intel Homebrew
+		"/usr/local/opt/duckdb/lib/libduckdb.dylib", // Alternative Homebrew location
+		"/usr/lib/libduckdb.dylib",                  // System location
+		"./libduckdb.dylib",                         // Current directory
+	}
+
+	locations = append(locations, standardPaths...)
+
+	return locations
+}
+
+// getLinuxLibraryPaths returns a list of paths to search for the DuckDB library on Linux
+func getLinuxLibraryPaths() []string {
+	locations := []string{}
+
+	// First check LD_LIBRARY_PATH
+	if libPaths := os.Getenv("LD_LIBRARY_PATH"); libPaths != "" {
+		for _, path := range filepath.SplitList(libPaths) {
+			locations = append(locations, filepath.Join(path, "libduckdb.so"))
+		}
+	}
+
+	// Then add standard Linux locations
+	standardPaths := []string{
+		"/usr/lib/libduckdb.so",
+		"/usr/local/lib/libduckdb.so",
+		"/usr/lib/x86_64-linux-gnu/libduckdb.so",  // Debian/Ubuntu for amd64
+		"/usr/lib/aarch64-linux-gnu/libduckdb.so", // Debian/Ubuntu for arm64
+		"/usr/lib64/libduckdb.so",                 // Fedora/RHEL/CentOS
+		"./libduckdb.so",                          // Current directory
+	}
+
+	locations = append(locations, standardPaths...)
+
+	return locations
 }
 
 func GoString(c *byte) string {

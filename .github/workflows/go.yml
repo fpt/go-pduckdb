@@ -1,0 +1,31 @@
+name: Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          cache: true
+
+      - name: Install DuckDB library
+        run: |
+          curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.2.2/libduckdb-linux-amd64.zip -o archive.zip
+          sudo unzip -j archive.zip libduckdb.so -d /usr/local/lib
+          sudo ldconfig
+          rm archive.zip
+
+      - name: Run Unit Tests
+        run: go test ./... -v
