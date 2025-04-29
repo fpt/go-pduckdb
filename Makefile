@@ -1,5 +1,6 @@
 run: ## Run the application
-	CGO_ENABLED=0 go run example/main.go
+	CGO_ENABLED=0 go run example/simple/main.go
+	CGO_ENABLED=0 go run example/databasesql/main.go
 
 test: ## Run unit tests
 	go test -v ./...

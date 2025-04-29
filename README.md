@@ -13,6 +13,7 @@ Uses [purego](https://github.com/ebitengine/purego) to interface with DuckDB's n
 - Query execution and result handling
 - Clear error reporting
 - Cross-platform compatibility
+- Standard database/sql interface support
 
 ## Installation
 
@@ -35,9 +36,72 @@ apt-get install duckdb
 ### Windows
 Download the DuckDB CLI from the [official website](https://duckdb.org/docs/installation/) and place the DLL in your system path.
 
-## Example
+## Usage Examples
 
-Here's a simple example of using go-pduckdb:
+### Using Standard database/sql Interface
+
+go-pduckdb implements the Go standard database/sql interface, allowing you to work with DuckDB like any other SQL database in Go:
+
+```go
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	
+	_ "github.com/fpt/go-pduckdb" // Import for driver registration
+)
+
+func main() {
+	// Open a database connection
+	db, err := sql.Open("duckdb", "example.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	
+	// Create a table
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY, 
+		name VARCHAR, 
+		email VARCHAR
+	)`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	// Insert data
+	_, err = db.Exec(`INSERT INTO users (id, name, email) VALUES (?, ?, ?)`, 
+		1, "John Doe", "john@example.com")
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	// Query data
+	rows, err := db.Query("SELECT id, name, email FROM users")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	
+	// Process results
+	for rows.Next() {
+		var id int
+		var name, email string
+		if err := rows.Scan(&id, &name, &email); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("User %d: %s (%s)\n", id, name, email)
+	}
+}
+```
+
+For a more comprehensive example, see [sql_example.go](./example/sql_example.go).
+
+### Using Native API
+
+If you prefer a more direct approach with the native API:
 
 ```go
 package main
@@ -118,7 +182,20 @@ For more examples, check the [example](./example) directory.
 
 ## API Documentation
 
-### Main Types
+### Standard database/sql Interface
+
+go-pduckdb registers itself as a driver named "duckdb" with the standard database/sql package, supporting:
+
+- Connection management (Open, Close)
+- Query execution (Exec, Query)
+- Prepared statements
+- Transactions
+- Context handling
+- Parameter binding
+
+### Native API
+
+go-pduckdb also provides a native API for more direct interaction with DuckDB:
 
 - **DuckDB**: Represents a database instance
 - **DuckDBConnection**: Handles connections to the database
