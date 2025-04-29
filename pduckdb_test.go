@@ -125,22 +125,12 @@ func TestDuckDB_Close(t *testing.T) {
 	}
 }
 
-// TestGetSystemLibrary tests that the system library path is returned based on OS
-func TestGetSystemLibrary(t *testing.T) {
-	// This is a simple test that just verifies the function returns a non-empty string
-	// A more comprehensive test would check OS-specific behavior
-	path := getSystemLibrary()
-	if path == "" {
-		t.Error("getSystemLibrary() returned empty string")
-	}
-}
-
 // TestGetDuckDBLibrary tests that the DuckDB library path is returned based on OS
 func TestGetDuckDBLibrary(t *testing.T) {
 	// This is a simple test that just verifies the function returns a non-empty string
 	// A more comprehensive test would check OS-specific behavior
-	path := getDuckDBLibrary()
-	if path == "" {
-		t.Error("getDuckDBLibrary() returned empty string")
+	_, err := loadDuckDBLibrary()
+	if err != nil {
+		t.Errorf("loadDuckDBLibrary() returned an error: %v", err)
 	}
 }

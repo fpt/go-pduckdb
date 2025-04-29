@@ -36,6 +36,29 @@ apt-get install duckdb
 ### Windows
 Download the DuckDB CLI from the [official website](https://duckdb.org/docs/installation/) and place the DLL in your system path.
 
+## Library Path Configuration
+
+go-pduckdb searches for the DuckDB library in several locations. You can configure the search path using environment variables:
+
+- `DUCKDB_LIBRARY_PATH` - specify the exact path to the DuckDB library file
+- `DYLD_LIBRARY_PATH` - on macOS, specify directories to search for the DuckDB library
+- `LD_LIBRARY_PATH` - on Linux, specify directories to search for the DuckDB library
+
+Example usage:
+
+```bash
+# Specify exact library path
+DUCKDB_LIBRARY_PATH=/path/to/libduckdb.dylib ./your_program
+
+# Or specify directory to search (macOS)
+DYLD_LIBRARY_PATH=/path/to/lib ./your_program
+
+# Or specify directory to search (Linux)
+LD_LIBRARY_PATH=/path/to/lib ./your_program
+```
+
+If no environment variables are set, the library will be searched in standard system locations.
+
 ## Usage Examples
 
 ### Using Standard database/sql Interface

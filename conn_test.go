@@ -28,7 +28,6 @@ func TestDuckDBConnection_Query_Success(t *testing.T) {
 	}
 
 	result, err := conn.Query("SELECT 1")
-
 	if err != nil {
 		t.Errorf("Query() error = %v, want nil", err)
 	}
@@ -80,7 +79,6 @@ func TestDuckDBConnection_Execute_Success(t *testing.T) {
 	}
 
 	err := conn.Execute("CREATE TABLE test (id INT)")
-
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
