@@ -14,6 +14,7 @@ Uses [purego](https://github.com/ebitengine/purego) to interface with DuckDB's n
 - Clear error reporting
 - Cross-platform compatibility
 - Standard database/sql interface support
+- Support for prepared statements with automatic type inference
 
 ## Installation
 
@@ -122,84 +123,35 @@ func main() {
 
 For a more comprehensive example, see [sql_example.go](./example/sql_example.go).
 
-### Using Native API
 
-If you prefer a more direct approach with the native API:
+### Parameter Binding and Type Conversion
+
+go-pduckdb features a sophisticated type conversion system that automatically handles type conversions for prepared statement parameters:
 
 ```go
-package main
-
-import (
-	"fmt"
-	"os"
-	
-	"github.com/fpt/go-pduckdb"
-)
-
-func main() {
-	// Open a database connection
-	db, err := pduckdb.NewDuckDB("example.db")
-	if err != nil {
-		fmt.Printf("Error opening database: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
-	
-	// Create a connection
-	conn, err := db.Connect()
-	if err != nil {
-		fmt.Printf("Error connecting to database: %v\n", err)
-		os.Exit(1)
-	}
-	
-	// Create a table
-	err = conn.Execute(`
-		CREATE TABLE users (
-			id INTEGER,
-			name VARCHAR,
-			email VARCHAR,
-			created_at TIMESTAMP
-		)
-	`)
-	if err != nil {
-		fmt.Printf("Error creating table: %v\n", err)
-		os.Exit(1)
-	}
-	
-	// Insert data
-	err = conn.Execute(`
-		INSERT INTO users VALUES 
-		(1, 'John Doe', 'john@example.com', '2025-01-15 08:30:00'),
-		(2, 'Jane Smith', 'jane@example.com', '2025-02-20 14:45:30')
-	`)
-	if err != nil {
-		fmt.Printf("Error inserting data: %v\n", err)
-		os.Exit(1)
-	}
-	
-	// Query data
-	result, err := conn.Query("SELECT * FROM users")
-	if err != nil {
-		fmt.Printf("Error querying data: %v\n", err)
-		os.Exit(1)
-	}
-	defer result.Close()
-	
-	// Display results
-	rowCount := result.RowCount()
-	fmt.Printf("Found %d users:\n", rowCount)
-	
-	for r := int32(0); r < int32(rowCount); r++ {
-		id, _ := result.ValueString(0, r)
-		name, _ := result.ValueString(1, r)
-		email, _ := result.ValueString(2, r)
-		timestamp, _ := result.ValueTimestamp(3, r)
-		
-		fmt.Printf("User %s: %s (%s) - Created: %s\n",
-			id, name, email, timestamp.Format("2006-01-02 15:04:05"))
-	}
+// Prepare a statement
+stmt, err := conn.Prepare("INSERT INTO users (id, name, created_date) VALUES (?, ?, ?)")
+if err != nil {
+    log.Fatal(err)
 }
+defer stmt.Close()
+
+// Execute with different parameter types
+// The driver will automatically convert these to the appropriate types
+err = stmt.Execute(
+    1,                                 // int -> INTEGER
+    "John Doe",                        // string -> VARCHAR
+    time.Date(2025, 5, 3, 0, 0, 0, 0, time.UTC),  // time.Time -> DATE
+)
 ```
+
+Supported conversions include:
+- Go bool -> DuckDB BOOLEAN
+- Go numeric types -> DuckDB numeric types with range validation
+- Go string -> Various DuckDB types based on content
+- Go []byte -> DuckDB BLOB
+- Go time.Time -> DuckDB DATE, TIME, or TIMESTAMP
+- Custom Date, Time, and Interval types for precise control
 
 For more examples, check the [example](./example) directory.
 
@@ -242,6 +194,15 @@ if hasValue {
     fmt.Println("Timestamp:", tsVal.Format("2006-01-02 15:04:05.000000"))
 }
 ```
+
+## Limitations
+
+### Some types are not supported due to purego limitation
+
+These types use struct return value which is not supported by purego in some platform.
+
+- Blob
+- Interval
 
 ## Project Structure
 
