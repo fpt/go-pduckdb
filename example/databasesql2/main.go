@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -17,10 +16,8 @@ func main() {
 	}
 	defer db.Close()
 
-	ctx := context.Background()
-
 	// Create a table
-	_, err = db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS users (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY, 
 		name VARCHAR, 
 		email VARCHAR
@@ -30,7 +27,7 @@ func main() {
 	}
 
 	// Insert data
-	_, err = db.ExecContext(ctx, `INSERT INTO users (id, name, email) VALUES (?, ?, ?)`,
+	_, err = db.Exec(`INSERT INTO users (id, name, email) VALUES (?, ?, ?)`,
 		1, "John Doe", "john@example.com")
 	if err != nil {
 		fmt.Printf("Error inserting data: %v\n", err)

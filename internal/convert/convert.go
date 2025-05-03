@@ -27,5 +27,7 @@ func (t Time) ToTime() time.Time {
 }
 
 // For compatibility with DuckDB types
-type DuckDBDate = int32
-type DuckDBTime = int64
+type (
+	DuckDBDate = int32
+	DuckDBTime = int64
+)

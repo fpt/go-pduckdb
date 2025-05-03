@@ -29,10 +29,20 @@ Also, make sure to install DuckDB on your platform:
 brew install duckdb
 ```
 
+Typically, `/opt/homebrew/lib/libduckdb.dylib` is installed.
+
 ### Linux (Ubuntu/Debian)
 ```bash
-apt-get install duckdb
+curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.2.2/libduckdb-linux-amd64.zip -o archive.zip
+sudo unzip -j archive.zip libduckdb.so -d /usr/local/lib
+sudo ldconfig
+rm archive.zip
 ```
+
+You can find a download URL in [official releases of DuckDB](https://github.com/duckdb/duckdb/releases).
+Assets starting with `libduckdb-` contains glibc build of `libduckdb.so`.
+
+For other Linux, Check official instruction: [Building DuckDB](https://duckdb.org/docs/stable/dev/building/linux.html).
 
 ### Windows
 Download the DuckDB CLI from the [official website](https://duckdb.org/docs/installation/) and place the DLL in your system path.
@@ -121,8 +131,7 @@ func main() {
 }
 ```
 
-For a more comprehensive example, see [sql_example.go](./example/sql_example.go).
-
+For a more comprehensive example, see the [database/sql example](./example/databasesql/main.go).
 
 ### Parameter Binding and Type Conversion
 
