@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"reflect"
 	"strconv"
@@ -309,126 +307,79 @@ func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 // StmtExecContext implements driver.StmtExecContext
 func (s *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	// If the prepared statement is available, use it
-	if s.preparedStmt != nil {
-		// Check for context cancellation
-		if ctx.Done() != nil {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
-			}
-		}
+	if s.preparedStmt == nil {
+		return nil, errors.New("prepared statement is not available")
+	}
 
-		// Bind parameters
-		for i, arg := range args {
-			// Parameter indices in DuckDB are 1-based
-			paramIdx := i + 1
-			err := s.preparedStmt.BindParameter(paramIdx, arg.Value)
-			if err != nil {
-				return nil, err
-			}
+	// Check for context cancellation
+	if ctx.Done() != nil {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
 		}
+	}
 
-		// Execute the prepared statement
-		result, err := s.preparedStmt.Execute()
+	// Bind parameters
+	for i, arg := range args {
+		// Parameter indices in DuckDB are 1-based
+		paramIdx := i + 1
+		err := s.preparedStmt.BindParameter(paramIdx, arg.Value)
 		if err != nil {
 			return nil, err
 		}
-		defer result.Close()
-
-		// Return the result
-		return &Result{}, nil
 	}
 
-	// Fall back to the old implementation if native prepared statements aren't supported
-	dargs, err := namedValueToValue(args)
+	// Execute the prepared statement
+	result, err := s.preparedStmt.Execute()
 	if err != nil {
 		return nil, err
 	}
+	defer result.Close()
 
-	query, err := replacePlaceholders(s.query, dargs)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.conn.Execute(query)
-	if err != nil {
-		return nil, err
-	}
-
+	// Return the result
 	return &Result{}, nil
 }
 
 // StmtQueryContext implements driver.StmtQueryContext
 func (s *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	// If the prepared statement is available, use it
-	if s.preparedStmt != nil {
-		// Check for context cancellation
-		if ctx.Done() != nil {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
-			}
-		}
+	if s.preparedStmt == nil {
+		return nil, errors.New("prepared statement is not available")
+	}
 
-		// Bind parameters
-		for i, arg := range args {
-			// Parameter indices in DuckDB are 1-based
-			paramIdx := i + 1
-			err := s.preparedStmt.BindParameter(paramIdx, arg.Value)
-			if err != nil {
-				return nil, err
-			}
+	// Check for context cancellation
+	if ctx.Done() != nil {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
 		}
+	}
 
-		// Execute the prepared statement
-		result, err := s.preparedStmt.Execute()
+	// Bind parameters
+	for i, arg := range args {
+		// Parameter indices in DuckDB are 1-based
+		paramIdx := i + 1
+		err := s.preparedStmt.BindParameter(paramIdx, arg.Value)
 		if err != nil {
 			return nil, err
 		}
-
-		// Create column names slice
-		columnCnt := result.ColumnCount()
-		columnNames := make([]string, columnCnt)
-		for i := int32(0); i < columnCnt; i++ {
-			columnNames[i] = result.ColumnName(i)
-		}
-
-		// Create and return rows
-		rows := &Rows{
-			result:      result,
-			columnCnt:   columnCnt,
-			rowCnt:      result.RowCount(),
-			currentRow:  0,
-			columnNames: columnNames,
-		}
-
-		return rows, nil
 	}
 
-	// Fall back to the old implementation if native prepared statements aren't supported
-	dargs, err := namedValueToValue(args)
+	// Execute the prepared statement
+	result, err := s.preparedStmt.Execute()
 	if err != nil {
 		return nil, err
 	}
 
-	query, err := replacePlaceholders(s.query, dargs)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := s.conn.Query(query)
-	if err != nil {
-		return nil, err
-	}
-
+	// Create column names slice
 	columnCnt := result.ColumnCount()
 	columnNames := make([]string, columnCnt)
 	for i := int32(0); i < columnCnt; i++ {
 		columnNames[i] = result.ColumnName(i)
 	}
 
+	// Create and return rows
 	rows := &Rows{
 		result:      result,
 		columnCnt:   columnCnt,
@@ -451,137 +402,6 @@ func (r *Result) LastInsertId() (int64, error) {
 // RowsAffected returns the number of rows affected.
 func (r *Result) RowsAffected() (int64, error) {
 	return 0, errors.New("RowsAffected is not supported in this implementation")
-}
-
-// Helper function to convert NamedValue slice to Value slice
-func namedValueToValue(named []driver.NamedValue) ([]driver.Value, error) {
-	dargs := make([]driver.Value, len(named))
-	for i, nv := range named {
-		dargs[i] = nv.Value
-	}
-	return dargs, nil
-}
-
-// Helper function to replace placeholders (?) with actual values
-func replacePlaceholders(query string, args []driver.Value) (string, error) {
-	// More robust implementation with better type handling
-	var result []byte
-	argIndex := 0
-
-	for i := 0; i < len(query); i++ {
-		if query[i] == '?' && argIndex < len(args) {
-			// Found a placeholder, replace it with the argument value
-			switch v := args[argIndex].(type) {
-			case nil:
-				result = append(result, []byte("NULL")...)
-			case int64:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case int32:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case int:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case int8:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case int16:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case uint64:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case uint32:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case uint:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case uint8:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case uint16:
-				result = append(result, []byte(fmt.Sprintf("%d", v))...)
-			case float64:
-				result = append(result, []byte(fmt.Sprintf("%g", v))...)
-			case float32:
-				result = append(result, []byte(fmt.Sprintf("%g", v))...)
-			case bool:
-				if v {
-					result = append(result, []byte("TRUE")...)
-				} else {
-					result = append(result, []byte("FALSE")...)
-				}
-			case []byte:
-				result = append(result, '\'')
-				// Escape single quotes in string
-				for _, b := range v {
-					if b == '\'' {
-						result = append(result, '\'', '\'') // Escape ' as ''
-					} else {
-						result = append(result, b)
-					}
-				}
-				result = append(result, '\'')
-			case string:
-				result = append(result, '\'')
-				// Escape single quotes in string
-				for j := 0; j < len(v); j++ {
-					if v[j] == '\'' {
-						result = append(result, '\'', '\'') // Escape ' as ''
-					} else {
-						result = append(result, v[j])
-					}
-				}
-				result = append(result, '\'')
-			case time.Time:
-				result = append(result, []byte(fmt.Sprintf("'%s'", v.Format("2006-01-02 15:04:05.999999")))...)
-			case Date:
-				result = append(result, []byte(fmt.Sprintf("DATE '%s'", v.ToTime().Format("2006-01-02")))...)
-			case Time:
-				result = append(result, []byte(fmt.Sprintf("TIME '%s'", v.ToTime().Format("15:04:05.999999")))...)
-			case Timestamp:
-				result = append(result, []byte(fmt.Sprintf("TIMESTAMP '%s'", v.ToTime().Format("2006-01-02 15:04:05.999999")))...)
-			// Interval is not supported.
-			case HugeInt:
-				// Simple string representation for HugeInt
-				result = append(result, []byte(fmt.Sprintf("%d%016x", v.Upper, v.Lower))...)
-			case Decimal:
-				// For decimal, we need a more sophisticated conversion
-				// This is a simplified approach
-				result = append(result, []byte(fmt.Sprintf("CAST(%d%016x AS DECIMAL(%d,%d))",
-					v.Value.Upper, v.Value.Lower, v.Width, v.Scale))...)
-			case JSON:
-				// For JSON, we need to wrap it in the JSON() function
-				result = append(result, []byte(fmt.Sprintf("JSON '%s'", v.Value))...)
-			case map[string]interface{}, []interface{}:
-				// Handle Go map/slice as JSON
-				jsonBytes, err := json.Marshal(v)
-				if err != nil {
-					return "", fmt.Errorf("failed to marshal JSON: %v", err)
-				}
-				result = append(result, []byte(fmt.Sprintf("JSON '%s'", string(jsonBytes)))...)
-			default:
-				// For unsupported types, try to use String() if available
-				if stringer, ok := v.(fmt.Stringer); ok {
-					str := stringer.String()
-					result = append(result, '\'')
-					for j := 0; j < len(str); j++ {
-						if str[j] == '\'' {
-							result = append(result, '\'', '\'') // Escape ' as ''
-						} else {
-							result = append(result, str[j])
-						}
-					}
-					result = append(result, '\'')
-				} else {
-					return "", fmt.Errorf("unsupported parameter type: %T", v)
-				}
-			}
-			argIndex++
-		} else {
-			// Regular character, just append it
-			result = append(result, query[i])
-		}
-	}
-
-	if argIndex < len(args) {
-		return "", fmt.Errorf("too many parameters provided: expected %d, got %d", argIndex, len(args))
-	}
-
-	return string(result), nil
 }
 
 // Ensure our driver implements necessary interfaces

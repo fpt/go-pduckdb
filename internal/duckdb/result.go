@@ -14,21 +14,20 @@ type Result struct {
 	ValueDate      func(*DuckDBResultRaw, int64, int32) int32
 	ValueTime      func(*DuckDBResultRaw, int64, int32) int64
 	ValueTimestamp func(*DuckDBResultRaw, int64, int32) int64
-	// Additional value functions
-	ValueBoolean  func(*DuckDBResultRaw, int64, int32) bool
-	ValueInt8     func(*DuckDBResultRaw, int64, int32) int8
-	ValueInt16    func(*DuckDBResultRaw, int64, int32) int16
-	ValueInt32    func(*DuckDBResultRaw, int64, int32) int32
-	ValueInt64    func(*DuckDBResultRaw, int64, int32) int64
-	ValueUint8    func(*DuckDBResultRaw, int64, int32) uint8
-	ValueUint16   func(*DuckDBResultRaw, int64, int32) uint16
-	ValueUint32   func(*DuckDBResultRaw, int64, int32) uint32
-	ValueUint64   func(*DuckDBResultRaw, int64, int32) uint64
-	ValueFloat    func(*DuckDBResultRaw, int64, int32) float32
-	ValueDouble   func(*DuckDBResultRaw, int64, int32) float64
-	ValueVarchar  func(*DuckDBResultRaw, int64, int32) *byte
-	ValueNull     func(*DuckDBResultRaw, int64, int32) bool
-	DestroyResult func(*DuckDBResultRaw)
+	ValueBoolean   func(*DuckDBResultRaw, int64, int32) bool
+	ValueInt8      func(*DuckDBResultRaw, int64, int32) int8
+	ValueInt16     func(*DuckDBResultRaw, int64, int32) int16
+	ValueInt32     func(*DuckDBResultRaw, int64, int32) int32
+	ValueInt64     func(*DuckDBResultRaw, int64, int32) int64
+	ValueUint8     func(*DuckDBResultRaw, int64, int32) uint8
+	ValueUint16    func(*DuckDBResultRaw, int64, int32) uint16
+	ValueUint32    func(*DuckDBResultRaw, int64, int32) uint32
+	ValueUint64    func(*DuckDBResultRaw, int64, int32) uint64
+	ValueFloat     func(*DuckDBResultRaw, int64, int32) float32
+	ValueDouble    func(*DuckDBResultRaw, int64, int32) float64
+	ValueVarchar   func(*DuckDBResultRaw, int64, int32) *byte
+	ValueNull      func(*DuckDBResultRaw, int64, int32) bool
+	DestroyResult  func(*DuckDBResultRaw)
 }
 
 // CreateResult creates a new Result from a database and raw result
@@ -42,21 +41,20 @@ func CreateResult(db *DB, raw DuckDBResultRaw) *Result {
 		ValueDate:      db.ValueDate,
 		ValueTime:      db.ValueTime,
 		ValueTimestamp: db.ValueTimestamp,
-		// Additional value functions
-		ValueBoolean:  db.ValueBoolean,
-		ValueInt8:     db.ValueInt8,
-		ValueInt16:    db.ValueInt16,
-		ValueInt32:    db.ValueInt32,
-		ValueInt64:    db.ValueInt64,
-		ValueUint8:    db.ValueUint8,
-		ValueUint16:   db.ValueUint16,
-		ValueUint32:   db.ValueUint32,
-		ValueUint64:   db.ValueUint64,
-		ValueFloat:    db.ValueFloat,
-		ValueDouble:   db.ValueDouble,
-		ValueVarchar:  db.ValueVarchar,
-		ValueNull:     db.ValueNull,
-		DestroyResult: db.DestroyResult,
+		ValueBoolean:   db.ValueBoolean,
+		ValueInt8:      db.ValueInt8,
+		ValueInt16:     db.ValueInt16,
+		ValueInt32:     db.ValueInt32,
+		ValueInt64:     db.ValueInt64,
+		ValueUint8:     db.ValueUint8,
+		ValueUint16:    db.ValueUint16,
+		ValueUint32:    db.ValueUint32,
+		ValueUint64:    db.ValueUint64,
+		ValueFloat:     db.ValueFloat,
+		ValueDouble:    db.ValueDouble,
+		ValueVarchar:   db.ValueVarchar,
+		ValueNull:      db.ValueNull,
+		DestroyResult:  db.DestroyResult,
 	}
 }
 
