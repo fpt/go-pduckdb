@@ -408,21 +408,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 			return ErrDuckDB{Message: "No suitable bind function available for VARCHAR"}
 		}
 
-	case duckdb.DuckDBTypeBlob:
-		// Convert to []byte
-		blobVal, err := convertToBlob(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to BLOB: %v", err)}
-		}
-		if ps.conn.db.BindBlob != nil {
-			if len(blobVal) == 0 {
-				state = ps.conn.db.BindBlob(ps.handle, idx, unsafe.Pointer(&[]byte{0}[0]), 0)
-			} else {
-				state = ps.conn.db.BindBlob(ps.handle, idx, unsafe.Pointer(&blobVal[0]), int64(len(blobVal)))
-			}
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for BLOB"}
-		}
+	// DuckDBTypeBlob is not supported.
 
 	case duckdb.DuckDBTypeDate:
 		// Convert to Date
