@@ -408,7 +408,9 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 			return ErrDuckDB{Message: "No suitable bind function available for VARCHAR"}
 		}
 
-	// DuckDBTypeBlob is not supported.
+	case duckdb.DuckDBTypeBlob:
+		// DuckDBTypeBlob is not supported.
+		return ErrDuckDB{Message: "Blob type is not supported"}
 
 	case duckdb.DuckDBTypeDate:
 		// Convert to Date
@@ -464,7 +466,9 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 			return ErrDuckDB{Message: "No suitable bind function available for TIMESTAMP"}
 		}
 
-	// DuckDBTypeInterval is not supported due to purego limitations
+	case duckdb.DuckDBTypeInterval:
+		// DuckDBTypeInterval is not supported due to purego limitations
+		return ErrDuckDB{Message: "Interval type is not supported"}
 
 	// For types where we have limited support, fall back to string representation
 	case duckdb.DuckDBTypeDecimal:

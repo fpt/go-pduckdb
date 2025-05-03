@@ -534,8 +534,7 @@ func replacePlaceholders(query string, args []driver.Value) (string, error) {
 				result = append(result, []byte(fmt.Sprintf("TIME '%s'", v.ToTime().Format("15:04:05.999999")))...)
 			case Timestamp:
 				result = append(result, []byte(fmt.Sprintf("TIMESTAMP '%s'", v.ToTime().Format("2006-01-02 15:04:05.999999")))...)
-			case Interval:
-				result = append(result, []byte(fmt.Sprintf("INTERVAL '%d months %d days %d microseconds'", v.Months, v.Days, v.Micros))...)
+			// Interval is not supported.
 			case HugeInt:
 				// Simple string representation for HugeInt
 				result = append(result, []byte(fmt.Sprintf("%d%016x", v.Upper, v.Lower))...)

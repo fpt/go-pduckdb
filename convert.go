@@ -310,27 +310,3 @@ func convertToTimestamp(value any) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("cannot convert %T to time.Time", value)
 	}
 }
-
-func convertToInterval(value any) (Interval, error) {
-	switch v := value.(type) {
-	case Interval:
-		return v, nil
-	case string:
-		// Very simplified interval parsing - would need more complete implementation
-		var months, days int32
-		var micros int64
-
-		_, err := fmt.Sscanf(v, "%d months %d days %d microseconds", &months, &days, &micros)
-		if err != nil {
-			return Interval{}, fmt.Errorf("cannot parse string '%s' as interval: %v", v, err)
-		}
-
-		return Interval{
-			Months: months,
-			Days:   days,
-			Micros: micros,
-		}, nil
-	default:
-		return Interval{}, fmt.Errorf("cannot convert %T to Interval", value)
-	}
-}

@@ -5,47 +5,6 @@ import (
 	"time"
 )
 
-// Type represents DuckDB data types
-type Type int32
-
-// DuckDB types
-const (
-	TypeInvalid     Type = 0
-	TypeBoolean     Type = 1
-	TypeTinyInt     Type = 2
-	TypeSmallInt    Type = 3
-	TypeInteger     Type = 4
-	TypeBigInt      Type = 5
-	TypeUTinyInt    Type = 6
-	TypeUSmallInt   Type = 7
-	TypeUInteger    Type = 8
-	TypeUBigInt     Type = 9
-	TypeFloat       Type = 10
-	TypeDouble      Type = 11
-	TypeTimestamp   Type = 12
-	TypeDate        Type = 13
-	TypeTime        Type = 14
-	TypeInterval    Type = 15
-	TypeHugeInt     Type = 16
-	TypeVarchar     Type = 17
-	TypeBlob        Type = 18
-	TypeDecimal     Type = 19
-	TypeTimestampS  Type = 20
-	TypeTimestampMS Type = 21
-	TypeTimestampNS Type = 22
-	TypeEnum        Type = 23
-	TypeList        Type = 24
-	TypeStruct      Type = 25
-	TypeMap         Type = 26
-	TypeUHugeInt    Type = 27
-	TypeUUID        Type = 28
-	TypeUnion       Type = 29
-	TypeBit         Type = 30
-	TypeTimeTZ      Type = 31
-	TypeTimestampTZ Type = 32
-	TypeJSON        Type = 33 // Adding JSON type constant
-)
-
 // ErrDuckDB represents an error from DuckDB operations
 type ErrDuckDB struct {
 	Message string
@@ -102,21 +61,7 @@ func (ts Timestamp) ToTime() time.Time {
 	return time.Unix(0, ts.Micros*1000).UTC()
 }
 
-// Interval represents a DuckDB interval
-type Interval struct {
-	Months int32
-	Days   int32
-	Micros int64
-}
-
-// NewInterval creates a new Interval
-func NewInterval(months, days int32, micros int64) *Interval {
-	return &Interval{
-		Months: months,
-		Days:   days,
-		Micros: micros,
-	}
-}
+// Interval is not supported.
 
 // HugeInt represents a DuckDB huge integer (128-bit)
 type HugeInt struct {
