@@ -1,3 +1,5 @@
+.PHONY: integ
+
 run: ## Run the application
 	CGO_ENABLED=0 go run example/simple/main.go
 	CGO_ENABLED=0 go run example/databasesql/main.go
@@ -15,8 +17,9 @@ fmt: ## Run format
 lint: ## Run lint
 	golangci-lint run
 
-inspect: ## Run in MCP inspector
-	npx @modelcontextprotocol/inspector go run ./godevmcp/main.go serve
+integ: ## Run integration tests
+	docker build --platform linux/amd64 -t go-pduckdb/integ -f internal/integ/Dockerfile . && \
+	docker run --rm go-pduckdb/integ
 
 help: ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
