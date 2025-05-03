@@ -7,6 +7,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/fpt/go-pduckdb/internal/convert"
 	"github.com/fpt/go-pduckdb/internal/duckdb"
 )
 
@@ -228,7 +229,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 	switch paramType {
 	case duckdb.DuckDBTypeBoolean:
 		// Convert to boolean
-		boolVal, err := convertToBoolean(value)
+		boolVal, err := convert.ToBoolean(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to BOOLEAN: %v", err)}
 		}
@@ -252,7 +253,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeTinyint:
 		// Convert to int8
-		intVal, err := convertToInt8(value)
+		intVal, err := convert.ToInt8(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to TINYINT: %v", err)}
 		}
@@ -268,7 +269,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeSmallint:
 		// Convert to int16
-		intVal, err := convertToInt16(value)
+		intVal, err := convert.ToInt16(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to SMALLINT: %v", err)}
 		}
@@ -284,7 +285,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeInteger:
 		// Convert to int32
-		intVal, err := convertToInt32(value)
+		intVal, err := convert.ToInt32(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to INTEGER: %v", err)}
 		}
@@ -298,7 +299,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeBigint:
 		// Convert to int64
-		intVal, err := convertToInt64(value)
+		intVal, err := convert.ToInt64(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to BIGINT: %v", err)}
 		}
@@ -310,7 +311,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeUTinyint:
 		// Convert to uint8
-		uintVal, err := convertToUint8(value)
+		uintVal, err := convert.ToUint8(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to UTINYINT: %v", err)}
 		}
@@ -326,7 +327,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeUSmallint:
 		// Convert to uint16
-		uintVal, err := convertToUint16(value)
+		uintVal, err := convert.ToUint16(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to USMALLINT: %v", err)}
 		}
@@ -342,7 +343,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeUInteger:
 		// Convert to uint32
-		uintVal, err := convertToUint32(value)
+		uintVal, err := convert.ToUint32(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to UINTEGER: %v", err)}
 		}
@@ -356,7 +357,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeUBigint:
 		// Convert to uint64
-		uintVal, err := convertToUint64(value)
+		uintVal, err := convert.ToUint64(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to UBIGINT: %v", err)}
 		}
@@ -370,7 +371,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeFloat:
 		// Convert to float32
-		floatVal, err := convertToFloat32(value)
+		floatVal, err := convert.ToFloat32(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to FLOAT: %v", err)}
 		}
@@ -384,7 +385,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeDouble:
 		// Convert to float64
-		doubleVal, err := convertToFloat64(value)
+		doubleVal, err := convert.ToFloat64(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DOUBLE: %v", err)}
 		}
@@ -396,7 +397,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeVarchar:
 		// Convert to string
-		strVal, err := convertToString(value)
+		strVal, err := convert.ToString(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to VARCHAR: %v", err)}
 		}
@@ -414,7 +415,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeDate:
 		// Convert to Date
-		dateVal, err := convertToDate(value)
+		dateVal, err := convert.ToDate(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DATE: %v", err)}
 		}
@@ -431,7 +432,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeTime:
 		// Convert to Time
-		timeVal, err := convertToTime(value)
+		timeVal, err := convert.ToTime(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to TIME: %v", err)}
 		}
@@ -448,7 +449,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	case duckdb.DuckDBTypeTimestamp:
 		// Convert to timestamp (time.Time)
-		timestampVal, err := convertToTimestamp(value)
+		timestampVal, err := convert.ToTimestamp(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to TIMESTAMP: %v", err)}
 		}
@@ -473,7 +474,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 	// For types where we have limited support, fall back to string representation
 	case duckdb.DuckDBTypeDecimal:
 		// Convert to string for decimal
-		strVal, err := convertToString(value)
+		strVal, err := convert.ToString(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DECIMAL string: %v", err)}
 		}
@@ -511,7 +512,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 	return nil
 }
 
-// bindWithGoType binds a parameter value based on the Go type (original implementation)
+// bindWithGoType binds a parameter value based on the Go type
 func (ps *PreparedStatement) bindWithGoType(paramIdx int, value any) error {
 	var state duckdb.DuckDBState
 	idx := int32(paramIdx)
