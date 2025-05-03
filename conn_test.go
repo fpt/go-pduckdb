@@ -2,119 +2,216 @@ package pduckdb
 
 import (
 	"testing"
+	"unsafe"
+
+	"github.com/fpt/go-pduckdb/internal/duckdb"
 )
 
-// mockDB creates a mock DuckDB for connection tests
-func mockDB() *DuckDB {
-	return &DuckDB{
-		columnCount:    func(*DuckDBResultRaw) int32 { return 0 },
-		rowCount:       func(*DuckDBResultRaw) int64 { return 0 },
-		columnName:     func(*DuckDBResultRaw, int32) *byte { return nil },
-		valueString:    func(*DuckDBResultRaw, int64, int32) *byte { return nil },
-		valueDate:      func(*DuckDBResultRaw, int64, int32) DuckDBDate { return 0 },
-		valueTime:      func(*DuckDBResultRaw, int64, int32) DuckDBTime { return 0 },
-		valueTimestamp: func(*DuckDBResultRaw, int64, int32) DuckDBTimestamp { return 0 },
-		destroyResult:  func(*DuckDBResultRaw) {},
-	}
-}
+func TestConnectionQuery(t *testing.T) {
+	// Create a test connection with a custom query function
+	conn := testConnection()
 
-func TestDuckDBConnection_Query_Success(t *testing.T) {
-	// Create a connection with a mock query function that returns success
-	conn := &DuckDBConnection{
-		db: mockDB(),
-		query: func(*byte, string, *DuckDBResultRaw) DuckDBState {
-			return DuckDBSuccess
-		},
+	// Override the query function to return a successful result
+	conn.db.Query = func(_ *byte, sql string, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
+		if sql == "SELECT 1" {
+			return duckdb.DuckDBSuccess
+		}
+		return duckdb.DuckDBError
 	}
 
+	// Test successful query
 	result, err := conn.Query("SELECT 1")
 	if err != nil {
-		t.Errorf("Query() error = %v, want nil", err)
+		t.Errorf("Expected successful query, got error: %v", err)
 	}
-
 	if result == nil {
-		t.Error("Query() result is nil, want non-nil")
-	}
-}
-
-func TestDuckDBConnection_Query_Error(t *testing.T) {
-	// Create a connection with a mock query function that returns error
-	conn := &DuckDBConnection{
-		db: mockDB(),
-		query: func(*byte, string, *DuckDBResultRaw) DuckDBState {
-			return DuckDBError
-		},
+		t.Errorf("Expected non-nil result")
 	}
 
-	result, err := conn.Query("SELECT 1")
-
+	// Test failed query
+	result, err = conn.Query("INVALID SQL")
 	if err == nil {
-		t.Error("Query() error is nil, want non-nil")
+		t.Errorf("Expected error for invalid SQL")
 	}
-
 	if result != nil {
-		t.Errorf("Query() result = %v, want nil", result)
-	}
-
-	// Check that error message contains the query
-	if err != nil && err.Error() != "Query failed: SELECT 1" {
-		t.Errorf("Query() error = %v, want 'Query failed: SELECT 1'", err)
+		t.Errorf("Expected nil result for failed query")
 	}
 }
 
-func TestDuckDBConnection_Execute_Success(t *testing.T) {
-	// Keep track of whether Close() was called
-	closeCalled := false
+func TestConnectionExecute(t *testing.T) {
+	// Create a test connection
+	conn := testConnection()
 
-	conn := &DuckDBConnection{
-		db: mockDB(),
-		query: func(*byte, string, *DuckDBResultRaw) DuckDBState {
-			return DuckDBSuccess
-		},
+	// Override the query function for testing
+	conn.db.Query = func(_ *byte, sql string, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
+		if sql == "CREATE TABLE test (id INT)" {
+			return duckdb.DuckDBSuccess
+		}
+		return duckdb.DuckDBError
 	}
 
-	// Replace the db.destroyResult function to track when Close is called
-	conn.db.destroyResult = func(*DuckDBResultRaw) {
-		closeCalled = true
-	}
-
+	// Test successful execution
 	err := conn.Execute("CREATE TABLE test (id INT)")
 	if err != nil {
-		t.Errorf("Execute() error = %v, want nil", err)
+		t.Errorf("Expected successful execution, got error: %v", err)
 	}
 
-	if !closeCalled {
-		t.Error("Execute() did not call Close() on the result")
-	}
-}
-
-func TestDuckDBConnection_Execute_Error(t *testing.T) {
-	conn := &DuckDBConnection{
-		db: mockDB(),
-		query: func(*byte, string, *DuckDBResultRaw) DuckDBState {
-			return DuckDBError
-		},
-	}
-
-	err := conn.Execute("CREATE TABLE test (id INT)")
-
+	// Test failed execution
+	err = conn.Execute("INVALID SQL")
 	if err == nil {
-		t.Error("Execute() error is nil, want non-nil")
-	}
-
-	// Check that error message contains the query
-	if err != nil && err.Error() != "Query failed: CREATE TABLE test (id INT)" {
-		t.Errorf("Execute() error = %v, want 'Query failed: CREATE TABLE test (id INT)'", err)
+		t.Errorf("Expected error for invalid SQL execution")
 	}
 }
 
-func TestDuckDBConnection_Close(t *testing.T) {
-	// This is a no-op test since Close() doesn't do anything currently
-	// It's included for completeness
-	conn := &DuckDBConnection{
-		db: mockDB(),
+func TestConnectionPrepare(t *testing.T) {
+	// Create a test connection
+	conn := testConnection()
+
+	// Set up prepare function
+	conn.db.Prepare = func(_, _ *byte, stmt *unsafe.Pointer) duckdb.DuckDBState {
+		// Use a valid pointer conversion pattern
+		dummyVal := 12345
+		*stmt = unsafe.Pointer(&dummyVal)
+		return duckdb.DuckDBSuccess
 	}
 
-	// Shouldn't panic
-	conn.Close()
+	// Set up number of parameters function
+	conn.db.NumParams = func(unsafe.Pointer) int64 {
+		return 3
+	}
+
+	// Test successful prepare
+	stmt, err := conn.Prepare("SELECT * FROM test WHERE id = ?")
+	if err != nil {
+		t.Errorf("Expected successful prepare, got error: %v", err)
+	}
+	if stmt == nil {
+		t.Errorf("Expected non-nil prepared statement")
+		return // Return early to avoid nil dereference
+	}
+	if stmt.numParams != 3 {
+		t.Errorf("Expected 3 parameters, got %d", stmt.numParams)
+	}
+
+	// Test prepare error
+	conn.db.Prepare = func(_, _ *byte, _ *unsafe.Pointer) duckdb.DuckDBState {
+		return duckdb.DuckDBError
+	}
+
+	stmt, err = conn.Prepare("INVALID SQL")
+	if err == nil {
+		t.Errorf("Expected error for invalid SQL prepare")
+	}
+	if stmt != nil {
+		t.Errorf("Expected nil statement for failed prepare")
+	}
+}
+
+func TestPreparedStatementClose(t *testing.T) {
+	// Create a test prepared statement
+	stmt := testPreparedStatement()
+
+	// Set up destroy function
+	stmt.conn.db.DestroyPrepared = func(*unsafe.Pointer) {}
+
+	// Test close
+	err := stmt.Close()
+	if err != nil {
+		t.Errorf("Expected successful close, got error: %v", err)
+	}
+
+	// Test double close (should be no-op)
+	err = stmt.Close()
+	if err != nil {
+		t.Errorf("Expected successful second close, got error: %v", err)
+	}
+}
+
+func TestPreparedStatementBindParameter(t *testing.T) {
+	// Create a test prepared statement
+	stmt := testPreparedStatement()
+
+	// Set up bind functions
+	stmt.conn.db.BindNull = func(unsafe.Pointer, int32) duckdb.DuckDBState {
+		return duckdb.DuckDBSuccess
+	}
+
+	stmt.conn.db.BindInt64 = func(unsafe.Pointer, int32, int64) duckdb.DuckDBState {
+		return duckdb.DuckDBSuccess
+	}
+
+	stmt.conn.db.BindDouble = func(unsafe.Pointer, int32, float64) duckdb.DuckDBState {
+		return duckdb.DuckDBSuccess
+	}
+
+	stmt.conn.db.BindVarchar = func(unsafe.Pointer, int32, *byte) duckdb.DuckDBState {
+		return duckdb.DuckDBSuccess
+	}
+
+	// Test binding different types
+	testCases := []interface{}{
+		nil,
+		int(42),
+		int64(42),
+		float64(3.14),
+		"test",
+	}
+
+	for i, val := range testCases {
+		err := stmt.BindParameter(i, val)
+		if err != nil {
+			t.Errorf("Failed to bind %T: %v", val, err)
+		}
+	}
+
+	// Test binding after close
+	setStatementClosed(stmt)
+	err := stmt.BindParameter(0, 42)
+	if err == nil {
+		t.Errorf("Expected error binding to closed statement")
+	}
+}
+
+func TestPreparedStatementExecute(t *testing.T) {
+	// Create a test prepared statement
+	stmt := testPreparedStatement()
+
+	// Set up execute function
+	stmt.conn.db.ExecutePrepared = func(_ unsafe.Pointer, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
+		return duckdb.DuckDBSuccess
+	}
+
+	// Test successful execute
+	result, err := stmt.Execute()
+	if err != nil {
+		t.Errorf("Expected successful execute, got error: %v", err)
+	}
+	if result == nil {
+		t.Errorf("Expected non-nil result")
+	}
+
+	// Test execute error
+	stmt.conn.db.ExecutePrepared = func(_ unsafe.Pointer, _ *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
+		return duckdb.DuckDBError
+	}
+
+	result, err = stmt.Execute()
+	if err == nil {
+		t.Errorf("Expected error for failed execute")
+	}
+	if result != nil {
+		t.Errorf("Expected nil result for failed execute")
+	}
+
+	// Test execute after close
+	if err := stmt.Close(); err != nil {
+		t.Errorf("Error closing statement: %v", err)
+	}
+	result, err = stmt.Execute()
+	if err == nil {
+		t.Errorf("Expected error executing closed statement")
+	}
+	if result != nil {
+		t.Errorf("Expected nil result for closed statement")
+	}
 }

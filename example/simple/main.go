@@ -13,32 +13,9 @@ func Exists(filename string) bool {
 	return err == nil
 }
 
-func cleanupDatabaseFiles(path string) error {
-	if Exists(path) {
-		if err := os.Remove(path); err != nil {
-			return err
-		}
-	}
-
-	walPath := path + ".wal"
-	if Exists(walPath) {
-		if err := os.Remove(walPath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func main() {
-	// Clean up any existing database files
-	if err := cleanupDatabaseFiles("my_database.db"); err != nil {
-		fmt.Printf("Error cleaning up database files: %v\n", err)
-		os.Exit(1)
-	}
-
 	// Create database instance
-	db, err := pd.NewDuckDB("my_database.db")
+	db, err := pd.NewDuckDB(":memory:")
 	if err != nil {
 		fmt.Printf("Error creating database: %v\n", err)
 		os.Exit(1)

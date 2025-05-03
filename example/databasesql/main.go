@@ -12,11 +12,15 @@ import (
 
 func main() {
 	// Open a database/sql connection
-	db, err := sql.Open("duckdb", "sql_example.db")
+	db, err := sql.Open("duckdb", ":memory:")
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
 
 	// Check connection is working
 	err = db.Ping()
@@ -39,7 +43,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error creating table: %v", err)
 	}
-	stmt.Close()
+	if err := stmt.Close(); err != nil {
+		log.Printf("Error closing statement: %v", err)
+	}
 	fmt.Println("Table created successfully")
 
 	// Delete any existing data to avoid duplicate key errors
@@ -51,7 +57,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error deleting existing data: %v", err)
 	}
-	stmt.Close()
+	if err := stmt.Close(); err != nil {
+		log.Printf("Error closing statement: %v", err)
+	}
 
 	// Insert data one row at a time to work around driver limitations
 	stmt, err = db.Prepare("INSERT INTO users (id, name, email, created_at) VALUES (?, ?, ?, ?)")
@@ -71,7 +79,9 @@ func main() {
 		log.Fatalf("Error inserting second row: %v", err)
 	}
 
-	stmt.Close()
+	if err := stmt.Close(); err != nil {
+		log.Printf("Error closing statement: %v", err)
+	}
 	fmt.Println("Data inserted successfully")
 
 	// Query using standard database/sql Query
@@ -79,7 +89,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error querying data: %v", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}()
 
 	fmt.Println("\nUser data:")
 	fmt.Println("---------------------------------------------------")
@@ -112,7 +126,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error preparing statement: %v", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			log.Printf("Error closing statement: %v", err)
+		}
+	}()
 
 	var name, email string
 	err = stmt.QueryRowContext(ctx, 1).Scan(&name, &email)
@@ -136,18 +154,26 @@ func main() {
 	// Prepare statement within transaction
 	txStmt, err := tx.PrepareContext(ctx, "UPDATE users SET name = ? WHERE id = ?")
 	if err != nil {
-		tx.Rollback()
+		if rbErr := tx.Rollback(); rbErr != nil {
+			log.Printf("Error rolling back transaction: %v", rbErr)
+		}
 		log.Fatalf("Error preparing statement in transaction: %v", err)
 	}
 
 	// Execute update within transaction
 	_, err = txStmt.ExecContext(ctx, "John Updated", 1)
 	if err != nil {
-		txStmt.Close()
-		tx.Rollback()
+		if closeErr := txStmt.Close(); closeErr != nil {
+			log.Printf("Error closing transaction statement: %v", closeErr)
+		}
+		if rbErr := tx.Rollback(); rbErr != nil {
+			log.Printf("Error rolling back transaction: %v", rbErr)
+		}
 		log.Fatalf("Error in transaction: %v", err)
 	}
-	txStmt.Close()
+	if err := txStmt.Close(); err != nil {
+		log.Printf("Error closing transaction statement: %v", err)
+	}
 
 	// Commit the transaction
 	err = tx.Commit()
@@ -164,7 +190,9 @@ func main() {
 
 	var updatedName string
 	err = stmt.QueryRowContext(ctx, 1).Scan(&updatedName)
-	stmt.Close()
+	if err := stmt.Close(); err != nil {
+		log.Printf("Error closing statement: %v", err)
+	}
 	if err != nil {
 		log.Fatalf("Error querying updated data: %v", err)
 	}
