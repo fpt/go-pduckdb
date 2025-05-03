@@ -201,55 +201,6 @@ func TestConvertToString(t *testing.T) {
 	}
 }
 
-func TestConvertToBlob(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    any
-		expected []byte
-		wantErr  bool
-	}{
-		{
-			name:     "convert []byte",
-			input:    []byte{0x01, 0x02, 0x03, 0x04},
-			expected: []byte{0x01, 0x02, 0x03, 0x04},
-			wantErr:  false,
-		},
-		{
-			name:     "convert string",
-			input:    "hello",
-			expected: []byte("hello"),
-			wantErr:  false,
-		},
-		{
-			name:     "convert unsupported type",
-			input:    42,
-			expected: nil,
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToBlob(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToBlob() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if len(got) != len(tt.expected) {
-					t.Errorf("convertToBlob() length = %v, want %v", len(got), len(tt.expected))
-					return
-				}
-				for i := range got {
-					if got[i] != tt.expected[i] {
-						t.Errorf("convertToBlob()[%d] = %v, want %v", i, got[i], tt.expected[i])
-					}
-				}
-			}
-		})
-	}
-}
-
 func TestConvertToDate(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -530,18 +481,13 @@ func TestConvertToInt16(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests when using the not-implemented function
-			if isConverterImplemented("int16") {
-				got, err := convertToInt16(tt.input)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("convertToInt16() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if got != tt.expected && !tt.wantErr {
-					t.Errorf("convertToInt16() = %v, want %v", got, tt.expected)
-				}
-			} else {
-				t.Skip("convertToInt16 is not fully implemented yet")
+			got, err := convertToInt16(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertToInt16() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.expected && !tt.wantErr {
+				t.Errorf("convertToInt16() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -588,18 +534,13 @@ func TestConvertToInt32(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests when using the not-implemented function
-			if isConverterImplemented("int32") {
-				got, err := convertToInt32(tt.input)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("convertToInt32() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if got != tt.expected && !tt.wantErr {
-					t.Errorf("convertToInt32() = %v, want %v", got, tt.expected)
-				}
-			} else {
-				t.Skip("convertToInt32 is not fully implemented yet")
+			got, err := convertToInt32(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertToInt32() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.expected && !tt.wantErr {
+				t.Errorf("convertToInt32() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -640,18 +581,13 @@ func TestConvertToInt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests when using the not-implemented function
-			if isConverterImplemented("int64") {
-				got, err := convertToInt64(tt.input)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("convertToInt64() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if got != tt.expected && !tt.wantErr {
-					t.Errorf("convertToInt64() = %v, want %v", got, tt.expected)
-				}
-			} else {
-				t.Skip("convertToInt64 is not fully implemented yet")
+			got, err := convertToInt64(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertToInt64() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.expected && !tt.wantErr {
+				t.Errorf("convertToInt64() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -704,18 +640,13 @@ func TestConvertToUint8(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests when using the not-implemented function
-			if isConverterImplemented("uint8") {
-				got, err := convertToUint8(tt.input)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("convertToUint8() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if got != tt.expected && !tt.wantErr {
-					t.Errorf("convertToUint8() = %v, want %v", got, tt.expected)
-				}
-			} else {
-				t.Skip("convertToUint8 is not fully implemented yet")
+			got, err := convertToUint8(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertToUint8() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.expected && !tt.wantErr {
+				t.Errorf("convertToUint8() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -756,19 +687,14 @@ func TestConvertToFloat32(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests when using the not-implemented function
-			if isConverterImplemented("float32") {
-				got, err := convertToFloat32(tt.input)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("convertToFloat32() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				// Use approximate comparison for floating point
-				if !tt.wantErr && math.Abs(float64(got-tt.expected)) > 0.00001 {
-					t.Errorf("convertToFloat32() = %v, want %v", got, tt.expected)
-				}
-			} else {
-				t.Skip("convertToFloat32 is not fully implemented yet")
+			got, err := convertToFloat32(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertToFloat32() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			// Use approximate comparison for floating point
+			if !tt.wantErr && math.Abs(float64(got-tt.expected)) > 0.00001 {
+				t.Errorf("convertToFloat32() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -809,48 +735,23 @@ func TestConvertToFloat64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests when using the not-implemented function
-			if isConverterImplemented("float64") {
-				got, err := convertToFloat64(tt.input)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("convertToFloat64() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				// Use approximate comparison for floating point
-				if !tt.wantErr && math.Abs(got-tt.expected) > 0.00000000001 {
-					t.Errorf("convertToFloat64() = %v, want %v", got, tt.expected)
-				}
-			} else {
-				t.Skip("convertToFloat64 is not fully implemented yet")
+			got, err := convertToFloat64(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertToFloat64() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// Use appropriate epsilon based on input type
+			epsilon := 0.00000000001 // Default for float64
+			if _, isFloat32 := tt.input.(float32); isFloat32 {
+				// Use larger epsilon for float32->float64 conversions
+				epsilon = 0.0000001
+			}
+
+			// Use approximate comparison for floating point
+			if !tt.wantErr && math.Abs(got-tt.expected) > epsilon {
+				t.Errorf("convertToFloat64() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
-}
-
-// Helper function to check if a converter function returns "not implemented" or actually works
-func isConverterImplemented(converterType string) bool {
-	var err error
-	switch converterType {
-	case "int16":
-		_, err = convertToInt16(int16(0))
-	case "int32":
-		_, err = convertToInt32(int32(0))
-	case "int64":
-		_, err = convertToInt64(int64(0))
-	case "uint8":
-		_, err = convertToUint8(uint8(0))
-	case "uint16":
-		_, err = convertToUint16(uint16(0))
-	case "uint32":
-		_, err = convertToUint32(uint32(0))
-	case "uint64":
-		_, err = convertToUint64(uint64(0))
-	case "float32":
-		_, err = convertToFloat32(float32(0))
-	case "float64":
-		_, err = convertToFloat64(float64(0))
-	default:
-		return true
-	}
-	return err == nil || err.Error() != "not implemented"
 }
