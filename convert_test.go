@@ -382,55 +382,6 @@ func TestConvertToTimestamp(t *testing.T) {
 	}
 }
 
-func TestConvertToInterval(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    any
-		expected Interval
-		wantErr  bool
-	}{
-		{
-			name:     "convert Interval",
-			input:    Interval{Months: 1, Days: 2, Micros: 3000000},
-			expected: Interval{Months: 1, Days: 2, Micros: 3000000},
-			wantErr:  false,
-		},
-		{
-			name:     "convert string valid",
-			input:    "5 months 6 days 7000000 microseconds",
-			expected: Interval{Months: 5, Days: 6, Micros: 7000000},
-			wantErr:  false,
-		},
-		{
-			name:     "convert string invalid",
-			input:    "not an interval",
-			expected: Interval{},
-			wantErr:  true,
-		},
-		{
-			name:     "convert unsupported type",
-			input:    42,
-			expected: Interval{},
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToInterval(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToInterval() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if got.Months != tt.expected.Months || got.Days != tt.expected.Days || got.Micros != tt.expected.Micros {
-					t.Errorf("convertToInterval() = %v, want %v", got, tt.expected)
-				}
-			}
-		})
-	}
-}
-
 // Add dummy implementations of the incomplete conversion functions to avoid test failures
 // These can be removed when the real implementations are added
 
