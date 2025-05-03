@@ -1,4 +1,4 @@
-package pduckdb
+package convert
 
 import (
 	"math"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestConvertToBoolean(t *testing.T) {
+func TestToBoolean(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -71,19 +71,19 @@ func TestConvertToBoolean(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToBoolean(tt.input)
+			got, err := ToBoolean(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToBoolean() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToBoolean() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected {
-				t.Errorf("convertToBoolean() = %v, want %v", got, tt.expected)
+				t.Errorf("ToBoolean() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToInt8(t *testing.T) {
+func TestToInt8(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -142,19 +142,19 @@ func TestConvertToInt8(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToInt8(tt.input)
+			got, err := ToInt8(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToInt8() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToInt8() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected && !tt.wantErr {
-				t.Errorf("convertToInt8() = %v, want %v", got, tt.expected)
+				t.Errorf("ToInt8() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToString(t *testing.T) {
+func TestToString(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -189,19 +189,19 @@ func TestConvertToString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToString(tt.input)
+			got, err := ToString(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected {
-				t.Errorf("convertToString() = %v, want %v", got, tt.expected)
+				t.Errorf("ToString() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToDate(t *testing.T) {
+func TestToDate(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -249,19 +249,19 @@ func TestConvertToDate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToDate(tt.input)
+			got, err := ToDate(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToDate() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && got.Days != tt.expected.Days {
-				t.Errorf("convertToDate() = %v, want %v", got, tt.expected)
+				t.Errorf("ToDate() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToTime(t *testing.T) {
+func TestToTime(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -309,19 +309,19 @@ func TestConvertToTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToTime(tt.input)
+			got, err := ToTime(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToTime() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToTime() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && got.Micros != tt.expected.Micros {
-				t.Errorf("convertToTime() = %v, want %v", got, tt.expected)
+				t.Errorf("ToTime() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToTimestamp(t *testing.T) {
+func TestToTimestamp(t *testing.T) {
 	refTime := time.Date(2023, 1, 1, 12, 30, 45, 500000000, time.UTC)
 
 	tests := []struct {
@@ -370,22 +370,19 @@ func TestConvertToTimestamp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToTimestamp(tt.input)
+			got, err := ToTimestamp(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToTimestamp() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToTimestamp() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && !got.Equal(tt.expected) {
-				t.Errorf("convertToTimestamp() = %v, want %v", got, tt.expected)
+				t.Errorf("ToTimestamp() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-// Add dummy implementations of the incomplete conversion functions to avoid test failures
-// These can be removed when the real implementations are added
-
-func TestConvertToInt16(t *testing.T) {
+func TestToInt16(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -432,19 +429,19 @@ func TestConvertToInt16(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToInt16(tt.input)
+			got, err := ToInt16(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToInt16() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToInt16() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected && !tt.wantErr {
-				t.Errorf("convertToInt16() = %v, want %v", got, tt.expected)
+				t.Errorf("ToInt16() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToInt32(t *testing.T) {
+func TestToInt32(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -485,19 +482,19 @@ func TestConvertToInt32(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToInt32(tt.input)
+			got, err := ToInt32(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToInt32() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToInt32() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected && !tt.wantErr {
-				t.Errorf("convertToInt32() = %v, want %v", got, tt.expected)
+				t.Errorf("ToInt32() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToInt64(t *testing.T) {
+func TestToInt64(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -532,19 +529,19 @@ func TestConvertToInt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToInt64(tt.input)
+			got, err := ToInt64(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToInt64() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToInt64() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected && !tt.wantErr {
-				t.Errorf("convertToInt64() = %v, want %v", got, tt.expected)
+				t.Errorf("ToInt64() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToUint8(t *testing.T) {
+func TestToUint8(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -591,19 +588,19 @@ func TestConvertToUint8(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToUint8(tt.input)
+			got, err := ToUint8(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToUint8() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToUint8() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.expected && !tt.wantErr {
-				t.Errorf("convertToUint8() = %v, want %v", got, tt.expected)
+				t.Errorf("ToUint8() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToFloat32(t *testing.T) {
+func TestToFloat32(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -638,20 +635,20 @@ func TestConvertToFloat32(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToFloat32(tt.input)
+			got, err := ToFloat32(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToFloat32() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToFloat32() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			// Use approximate comparison for floating point
 			if !tt.wantErr && math.Abs(float64(got-tt.expected)) > 0.00001 {
-				t.Errorf("convertToFloat32() = %v, want %v", got, tt.expected)
+				t.Errorf("ToFloat32() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestConvertToFloat64(t *testing.T) {
+func TestToFloat64(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -686,9 +683,9 @@ func TestConvertToFloat64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertToFloat64(tt.input)
+			got, err := ToFloat64(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertToFloat64() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ToFloat64() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -701,7 +698,7 @@ func TestConvertToFloat64(t *testing.T) {
 
 			// Use approximate comparison for floating point
 			if !tt.wantErr && math.Abs(got-tt.expected) > epsilon {
-				t.Errorf("convertToFloat64() = %v, want %v", got, tt.expected)
+				t.Errorf("ToFloat64() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
