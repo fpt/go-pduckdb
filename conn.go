@@ -194,7 +194,7 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 	}
 
 	// Get parameter type information if available
-	var paramType duckdb.DuckDBType = duckdb.DuckDBTypeInvalid
+	paramType := duckdb.DuckDBTypeInvalid
 	if ps.conn.db.ParamType != nil {
 		// Parameter indices in DuckDB are 0-based for param_type
 		idx := int64(paramIdx - 1)
