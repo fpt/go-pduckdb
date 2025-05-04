@@ -11,9 +11,9 @@ import (
 
 // Person represents a person with name, age, and custom attributes
 type Person struct {
-	Name       string                 `json:"name"`
-	Age        int                    `json:"age"`
-	Attributes map[string]interface{} `json:"attributes"`
+	Name       string         `json:"name"`
+	Age        int            `json:"age"`
+	Attributes map[string]any `json:"attributes"`
 }
 
 func main() {
@@ -45,12 +45,12 @@ func main() {
 	person1 := Person{
 		Name: "John Doe",
 		Age:  30,
-		Attributes: map[string]interface{}{
+		Attributes: map[string]any{
 			"height":   180,
 			"weight":   75.5,
 			"hobbies":  []string{"reading", "running", "coding"},
 			"employed": true,
-			"address": map[string]interface{}{
+			"address": map[string]any{
 				"city":    "New York",
 				"country": "USA",
 			},
@@ -60,12 +60,12 @@ func main() {
 	person2 := Person{
 		Name: "Jane Smith",
 		Age:  28,
-		Attributes: map[string]interface{}{
+		Attributes: map[string]any{
 			"height":   165,
 			"weight":   62.0,
 			"hobbies":  []string{"painting", "traveling", "swimming"},
 			"employed": true,
-			"address": map[string]interface{}{
+			"address": map[string]any{
 				"city":    "San Francisco",
 				"country": "USA",
 			},

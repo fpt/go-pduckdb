@@ -119,9 +119,9 @@ func main() {
 
 	// Iterate through rows
 	for rows.Next() {
-		// Create a slice of interface{} to hold the row values
-		rowValues := make([]interface{}, len(columns))
-		rowPointers := make([]interface{}, len(columns))
+		// Create a slice of any to hold the row values
+		rowValues := make([]any, len(columns))
+		rowPointers := make([]any, len(columns))
 
 		// Create pointers to the correct types based on column type information
 		for i, ct := range columnTypes {
