@@ -46,6 +46,21 @@ func (r *DuckDBResult) ValueTimestamp(column int64, row int32) (time.Time, bool)
 	return r.internal.GetValueTimestamp(column, row)
 }
 
+// ValueBoolean returns the boolean value at the given column and row
+func (r *DuckDBResult) ValueBoolean(column int64, row int32) (bool, bool) {
+	return r.internal.GetValueBoolean(column, row)
+}
+
+// ValueDouble returns the double (float64) value at the given column and row
+func (r *DuckDBResult) ValueDouble(column int64, row int32) (float64, bool) {
+	return r.internal.GetValueDouble(column, row)
+}
+
+// ValueNull checks if the value at the given column and row is NULL
+func (r *DuckDBResult) ValueNull(column int64, row int32) bool {
+	return r.internal.IsNull(column, row)
+}
+
 // Close destroys the result and frees associated resources
 func (r *DuckDBResult) Close() {
 	r.internal.Close()

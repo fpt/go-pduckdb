@@ -1,8 +1,6 @@
 package pduckdb
 
 import (
-	"unsafe"
-
 	"github.com/fpt/go-pduckdb/internal/duckdb"
 )
 
@@ -36,23 +34,4 @@ func testConnection() *DuckDBConnection {
 		handle: new(byte),
 		db:     duckdb.TestDB(),
 	}
-}
-
-// testPreparedStatement creates a mock prepared statement for testing
-func testPreparedStatement() *PreparedStatement {
-	conn := testConnection()
-	// Add the destroy prepared function to the mock
-	conn.db.DestroyPrepared = func(*unsafe.Pointer) {}
-	handle := duckdb.TestPreparedStatement(conn.db)
-
-	return &PreparedStatement{
-		handle:    handle,
-		conn:      conn,
-		numParams: 3,
-	}
-}
-
-// setStatementClosed marks a test prepared statement as closed for testing purposes
-func setStatementClosed(stmt *PreparedStatement) {
-	stmt.handle = nil
 }
