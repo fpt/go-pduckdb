@@ -12,7 +12,7 @@ type DuckDBResult struct {
 }
 
 // ColumnCount returns the number of columns in the result
-func (r *DuckDBResult) ColumnCount() int32 {
+func (r *DuckDBResult) ColumnCount() int64 {
 	return r.internal.GetColumnCount()
 }
 
@@ -22,8 +22,18 @@ func (r *DuckDBResult) RowCount() int64 {
 }
 
 // ColumnName returns the name of the column at the given index
-func (r *DuckDBResult) ColumnName(column int32) string {
+func (r *DuckDBResult) ColumnName(column int64) string {
 	return r.internal.GetColumnName(column)
+}
+
+// ColumnType returns the logical type of the column at the given index
+func (r *DuckDBResult) ColumnType(column int64) duckdb.DuckDBType {
+	return r.internal.GetColumnType(column)
+}
+
+// ColumnType returns the logical type of the column at the given index
+func (r *DuckDBResult) ColumnLogicalType(column int64) duckdb.DuckDBLogicalType {
+	return r.internal.GetColumnLogicalType(column)
 }
 
 // ValueString returns the string value at the given row and column

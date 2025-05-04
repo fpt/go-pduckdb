@@ -71,13 +71,13 @@ func main() {
 	fmt.Printf("Result has %d columns and %d rows\n", columnCount, rowCount)
 
 	// Print column names
-	for i := int32(0); i < columnCount; i++ {
+	for i := int64(0); i < columnCount; i++ {
 		fmt.Printf("Column %d: %s\n", i, result.ColumnName(i))
 	}
 
 	// Get column types to properly handle date/time values
 	columnNames := make([]string, columnCount)
-	for i := int32(0); i < columnCount; i++ {
+	for i := int64(0); i < columnCount; i++ {
 		columnNames[i] = result.ColumnName(i)
 	}
 

@@ -28,8 +28,9 @@ func TestDuckDBConnect(t *testing.T) {
 	db := testDuckDB()
 
 	// Configure the Connect function to succeed
-	db.db.Connect = func(_ *byte, handle **byte) duckdb.DuckDBState {
-		*handle = new(byte) // Some non-nil pointer
+	db.db.Connect = func(_ duckdb.DuckDBDatabase, handle *duckdb.DuckDBConnection) duckdb.DuckDBState {
+		var mockConnection duckdb.DuckDBConnection
+		*handle = mockConnection // Assign a non-nil connection
 		return duckdb.DuckDBSuccess
 	}
 
@@ -43,7 +44,7 @@ func TestDuckDBConnect(t *testing.T) {
 	}
 
 	// Test failed connection
-	db.db.Connect = func(_ *byte, _ **byte) duckdb.DuckDBState {
+	db.db.Connect = func(_ duckdb.DuckDBDatabase, _ *duckdb.DuckDBConnection) duckdb.DuckDBState {
 		return duckdb.DuckDBError
 	}
 
@@ -62,7 +63,7 @@ func TestDuckDBClose(t *testing.T) {
 
 	// Mock the Close function to track if it was called
 	var closeCalled bool
-	db.db.Close = func(handle **byte) {
+	db.db.Close = func(_ *duckdb.DuckDBDatabase) {
 		closeCalled = true
 	}
 

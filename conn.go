@@ -4,21 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"unsafe"
 
 	"github.com/fpt/go-pduckdb/internal/convert"
 	"github.com/fpt/go-pduckdb/internal/duckdb"
+	"github.com/fpt/go-pduckdb/types"
 )
 
 // DuckDBConnection represents a connection to a DuckDB database
 type DuckDBConnection struct {
-	handle *byte
+	handle duckdb.DuckDBConnection
 	db     *duckdb.DB
 }
 
 // PreparedStatement represents a DuckDB prepared statement
 type PreparedStatement struct {
-	handle    unsafe.Pointer
+	handle    duckdb.DuckDBPreparedStatement
 	conn      *DuckDBConnection
 	numParams int32
 }
@@ -94,7 +94,7 @@ func (c *DuckDBConnection) Query(sql string) (*DuckDBResult, error) {
 	cQuery := duckdb.ToCString(sql)
 	defer duckdb.FreeCString(cQuery)
 
-	state := c.db.Query(c.handle, sql, &rawResult)
+	state := c.db.Query(c.handle, cQuery, &rawResult)
 	if state != duckdb.DuckDBSuccess {
 		return nil, ErrDuckDB{Message: "Query failed: " + sql}
 	}
@@ -125,7 +125,7 @@ func (c *DuckDBConnection) Prepare(query string) (*PreparedStatement, error) {
 		return nil, ErrDuckDB{Message: "Prepare function not available in this DuckDB build"}
 	}
 
-	var stmt unsafe.Pointer
+	var stmt duckdb.DuckDBPreparedStatement
 	cQuery := duckdb.ToCString(query)
 	defer duckdb.FreeCString(cQuery)
 
@@ -539,10 +539,10 @@ func (ps *PreparedStatement) Execute() (*DuckDBResult, error) {
 }
 
 // marshalToJSON converts any value to a JSON object
-func marshalToJSON(value any) (*JSON, error) {
+func marshalToJSON(value any) (*types.JSON, error) {
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return nil, err
 	}
-	return NewJSON(string(jsonBytes)), nil
+	return types.NewJSON(string(jsonBytes)), nil
 }

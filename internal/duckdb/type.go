@@ -1,6 +1,12 @@
 // Package duckdb provides internal implementation details for the go-pduckdb driver.
 package duckdb
 
+import (
+	"reflect"
+	"time"
+	"unsafe"
+)
+
 // DuckDBState represents the state returned by DuckDB operations
 type DuckDBState int32
 
@@ -157,6 +163,92 @@ const (
 	DuckDBTypeIntegerLiteral DuckDBType = 38
 )
 
+// GoType returns the Go type corresponding to the DuckDB type
+func (t DuckDBType) GoType() reflect.Type {
+	switch t {
+	case DuckDBTypeInvalid:
+		return nil
+	case DuckDBTypeBoolean:
+		return reflect.TypeOf(false)
+	case DuckDBTypeTinyint:
+		return reflect.TypeOf(int8(0))
+	case DuckDBTypeSmallint:
+		return reflect.TypeOf(int16(0))
+	case DuckDBTypeInteger:
+		return reflect.TypeOf(int32(0))
+	case DuckDBTypeBigint:
+		return reflect.TypeOf(int64(0))
+	case DuckDBTypeUTinyint:
+		return reflect.TypeOf(uint8(0))
+	case DuckDBTypeUSmallint:
+		return reflect.TypeOf(uint16(0))
+	case DuckDBTypeUInteger:
+		return reflect.TypeOf(uint32(0))
+	case DuckDBTypeUBigint:
+		return reflect.TypeOf(uint64(0))
+	case DuckDBTypeFloat:
+		return reflect.TypeOf(float32(0))
+	case DuckDBTypeDouble:
+		return reflect.TypeOf(float64(0))
+	case DuckDBTypeTimestamp:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeDate:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeTime:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeInterval:
+		return reflect.TypeOf(int64(0))
+	case DuckDBTypeHugeint:
+		return reflect.TypeOf(int64(0))
+	case DuckDBTypeUHugeint:
+		return reflect.TypeOf(uint64(0))
+	case DuckDBTypeVarchar:
+		return reflect.TypeOf("")
+	case DuckDBTypeBlob:
+		return reflect.TypeOf([]byte{})
+	case DuckDBTypeDecimal:
+		return reflect.TypeOf(float64(0))
+	case DuckDBTypeTimestampS:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeTimestampMS:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeTimestampNS:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeEnum:
+		return reflect.TypeOf("")
+	case DuckDBTypeList:
+		return reflect.TypeOf([]interface{}{})
+	case DuckDBTypeStruct:
+		return reflect.TypeOf(map[string]any{})
+	case DuckDBTypeMap:
+		return reflect.TypeOf(map[string]any{})
+	case DuckDBTypeArray:
+		return reflect.TypeOf([]any{})
+	case DuckDBTypeUUID:
+		return reflect.TypeOf([16]byte{})
+	case DuckDBTypeUnion:
+		return reflect.TypeOf([]any{})
+	case DuckDBTypeBit:
+		return reflect.TypeOf([]byte{})
+	case DuckDBTypeTimeTZ:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeTimestampTZ:
+		return reflect.TypeOf(time.Time{})
+	case DuckDBTypeAny:
+		return reflect.TypeOf(any(nil))
+	case DuckDBTypeVarInt:
+		return reflect.TypeOf(int64(0))
+	case DuckDBTypeSQLNull:
+		return reflect.TypeOf(nil)
+	case DuckDBTypeStringLiteral:
+		return reflect.TypeOf("")
+	case DuckDBTypeIntegerLiteral:
+		return reflect.TypeOf(int64(0))
+	default:
+		return nil
+	}
+}
+
 // String returns a string representation of the DuckDB type
 func (t DuckDBType) String() string {
 	switch t {
@@ -242,6 +334,21 @@ func (t DuckDBType) String() string {
 		return "UNKNOWN"
 	}
 }
+
+// DuckDBValue represents a DuckDB value
+type DuckDBValue unsafe.Pointer
+
+// DuckDBConnection represents a DuckDB connection
+type DuckDBConnection unsafe.Pointer
+
+// DuckDBDatabase represents a DuckDB database
+type DuckDBDatabase unsafe.Pointer
+
+// DuckDBPreparedStatement represents a DuckDB prepared statement
+type DuckDBPreparedStatement unsafe.Pointer
+
+// DuckDBLogicalType represents a DuckDB logical type
+type DuckDBLogicalType unsafe.Pointer
 
 // DuckDBStatementType represents the type of a DuckDB statement
 type DuckDBStatementType int32
@@ -340,3 +447,9 @@ func (t DuckDBStatementType) String() string {
 		return "UNKNOWN"
 	}
 }
+
+// DuckDBDataChunk represents a DuckDB data chunk
+type DuckDBDataChunk unsafe.Pointer
+
+// DuckDBVector represents a DuckDB vector
+type DuckDBVector unsafe.Pointer

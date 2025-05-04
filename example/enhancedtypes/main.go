@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -21,8 +22,10 @@ func main() {
 		}
 	}()
 
+	ctx := context.Background()
+
 	// Create a table with various data types
-	_, err = db.Exec(`
+	_, err = db.ExecContext(ctx, `
 		CREATE TABLE enhanced_types (
 			id INTEGER PRIMARY KEY,
 			int_val INTEGER,
@@ -46,7 +49,7 @@ func main() {
 	timestamp := now.Format("2006-01-02 15:04:05")
 
 	// Insert data with different types
-	_, err = db.Exec(`
+	_, err = db.ExecContext(ctx, `
 		INSERT INTO enhanced_types 
 		(id, int_val, float_val, bool_val, date_val, time_val, timestamp_val, varchar_val, blob_val)
 		VALUES 
@@ -57,7 +60,7 @@ func main() {
 	}
 
 	// Query the data and demonstrate type information
-	rows, err := db.Query("SELECT * FROM enhanced_types")
+	rows, err := db.QueryContext(ctx, "SELECT * FROM enhanced_types")
 	if err != nil {
 		log.Fatalf("Error querying data: %v", err)
 	}

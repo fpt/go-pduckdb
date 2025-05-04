@@ -7,9 +7,6 @@ import (
 	"errors"
 	"io"
 	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // Initialize and register the driver
@@ -128,7 +125,7 @@ func (tx *Tx) Rollback() error {
 // Rows implements database/sql/driver.Rows
 type Rows struct {
 	result      *DuckDBResult
-	columnCnt   int32
+	columnCnt   int64
 	rowCnt      int64
 	currentRow  int64
 	columnNames []string
@@ -188,98 +185,24 @@ func (r *Rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-// ColumnTypes returns column type information.
-func (r *Rows) ColumnTypes() ([]*ColumnType, error) {
-	// Create a slice to hold the column types
-	columnTypes := make([]*ColumnType, r.columnCnt)
-
-	// We need to determine the types for each column
-	for i := int32(0); i < r.columnCnt; i++ {
-		// Default values
-		scanType := reflect.TypeOf("")
-		dbType := "VARCHAR"
-		nullable := true
-		length := int64(0)
-
-		// Check if there's data to determine type from
-		if r.rowCnt > 0 {
-			// Try to determine type by checking different value getters
-			col := int64(i)
-			row := int32(0)
-
-			// Check for timestamp/date/time types first
-			if _, ok := r.result.ValueTimestamp(col, row); ok {
-				scanType = reflect.TypeOf(time.Time{})
-				dbType = "TIMESTAMP"
-			} else if _, ok := r.result.ValueDate(col, row); ok {
-				scanType = reflect.TypeOf(time.Time{})
-				dbType = "DATE"
-			} else if _, ok := r.result.ValueTime(col, row); ok {
-				scanType = reflect.TypeOf(time.Time{})
-				dbType = "TIME"
-			} else {
-				// For other types, we'd need to infer from the string value
-				// This is a simple heuristic and could be improved
-				if val, ok := r.result.ValueString(col, row); ok {
-					// Try to determine type from string value
-					if val == "true" || val == "false" {
-						scanType = reflect.TypeOf(bool(false))
-						dbType = "BOOLEAN"
-					} else if isInteger(val) {
-						// Could be INT, BIGINT, etc.
-						scanType = reflect.TypeOf(int64(0))
-						dbType = "INTEGER"
-					} else if isFloat(val) {
-						scanType = reflect.TypeOf(float64(0))
-						dbType = "DOUBLE"
-					} else if isJSON(val) {
-						// Check if the value is JSON
-						scanType = reflect.TypeOf(JSON{})
-						dbType = "JSON"
-					}
-
-					// Set length for VARCHAR types
-					if dbType == "VARCHAR" {
-						length = int64(len(val))
-					}
-				}
-			}
-		}
-
-		columnTypes[i] = &ColumnType{
-			name:         r.columnNames[i],
-			databaseType: dbType,
-			length:       length,
-			nullable:     nullable,
-			scanType:     scanType,
-		}
-	}
-
-	return columnTypes, nil
+// ColumnTypeScanType returns column type information.
+// Implements RowsColumnTypeScanType
+func (r *Rows) ColumnTypeScanType(index int) reflect.Type {
+	colType := r.result.ColumnType(int64(index))
+	return colType.GoType()
 }
 
-// Helper functions to infer types from string values
-func isInteger(val string) bool {
-	_, err := strconv.ParseInt(val, 10, 64)
-	return err == nil
+// ColumnTypeDatabaseTypeName returns column type information.
+// Implements RowsColumnTypeDatabaseTypeName
+func (r *Rows) ColumnTypeDatabaseTypeName(index int) string {
+	return r.result.ColumnName(int64(index))
 }
 
-func isFloat(val string) bool {
-	_, err := strconv.ParseFloat(val, 64)
-	return err == nil
-}
-
-// isJSON checks if a string value is likely JSON
-func isJSON(val string) bool {
-	// Simple heuristic: JSON typically starts with { or [ and ends with } or ]
-	val = strings.TrimSpace(val)
-	if len(val) < 2 {
-		return false
-	}
-
-	// Check if it starts with { or [ and ends with } or ]
-	return (val[0] == '{' && val[len(val)-1] == '}') ||
-		(val[0] == '[' && val[len(val)-1] == ']')
+// ColumnTypeNullable returns column type information.
+// Implements RowsColumnTypeNullable
+func (r *Rows) ColumnTypeNullable(index int) (nullable, ok bool) {
+	// DuckDB does not support nullable types, so we return false
+	return false, false
 }
 
 // Additional interfaces to support context and named parameters
@@ -338,7 +261,9 @@ func (s *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 	defer result.Close()
 
 	// Return the result
-	return &Result{}, nil
+	return &Result{
+		result: result,
+	}, nil
 }
 
 // StmtQueryContext implements driver.StmtQueryContext
@@ -375,7 +300,7 @@ func (s *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 	// Create column names slice
 	columnCnt := result.ColumnCount()
 	columnNames := make([]string, columnCnt)
-	for i := int32(0); i < columnCnt; i++ {
+	for i := int64(0); i < columnCnt; i++ {
 		columnNames[i] = result.ColumnName(i)
 	}
 
@@ -392,7 +317,9 @@ func (s *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 }
 
 // Result implements driver.Result
-type Result struct{}
+type Result struct {
+	result *DuckDBResult
+}
 
 // LastInsertId returns the database's auto-generated ID.
 func (r *Result) LastInsertId() (int64, error) {

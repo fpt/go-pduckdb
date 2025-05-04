@@ -6,10 +6,13 @@ import (
 
 // Result wraps the raw result and provides methods to access the data
 type Result struct {
-	Raw            DuckDBResultRaw
-	ColumnCount    func(*DuckDBResultRaw) int32
-	RowCount       func(*DuckDBResultRaw) int64
-	ColumnName     func(*DuckDBResultRaw, int32) *byte
+	Raw               DuckDBResultRaw
+	ColumnCount       func(*DuckDBResultRaw) int64
+	RowCount          func(*DuckDBResultRaw) int64
+	ColumnName        func(*DuckDBResultRaw, int64) *byte
+	ColumnType        func(*DuckDBResultRaw, int64) DuckDBType
+	ColumnLogicalType func(*DuckDBResultRaw, int64) DuckDBLogicalType
+	// Value functions return the value at the given column and row
 	ValueString    func(*DuckDBResultRaw, int64, int32) *byte
 	ValueDate      func(*DuckDBResultRaw, int64, int32) int32
 	ValueTime      func(*DuckDBResultRaw, int64, int32) int64
@@ -37,6 +40,7 @@ func CreateResult(db *DB, raw DuckDBResultRaw) *Result {
 		ColumnCount:    db.ColumnCount,
 		RowCount:       db.RowCount,
 		ColumnName:     db.ColumnName,
+		ColumnType:     db.ColumnType,
 		ValueString:    db.ValueString,
 		ValueDate:      db.ValueDate,
 		ValueTime:      db.ValueTime,
@@ -59,7 +63,7 @@ func CreateResult(db *DB, raw DuckDBResultRaw) *Result {
 }
 
 // GetColumnCount returns the number of columns in the result
-func (r *Result) GetColumnCount() int32 {
+func (r *Result) GetColumnCount() int64 {
 	return r.ColumnCount(&r.Raw)
 }
 
@@ -69,9 +73,21 @@ func (r *Result) GetRowCount() int64 {
 }
 
 // GetColumnName returns the name of the column at the given index
-func (r *Result) GetColumnName(column int32) string {
+func (r *Result) GetColumnName(column int64) string {
 	ptr := r.ColumnName(&r.Raw, column)
 	return GoString(ptr)
+}
+
+// GetColumnType returns the type of the column at the given index
+func (r *Result) GetColumnType(column int64) DuckDBType {
+	typ := r.ColumnType(&r.Raw, column)
+	return typ
+}
+
+// GetColumnLogicalType returns the logical type of the column at the given index
+func (r *Result) GetColumnLogicalType(column int64) DuckDBLogicalType {
+	typ := r.ColumnLogicalType(&r.Raw, column)
+	return typ
 }
 
 // GetValueString returns the string value at the given row and column

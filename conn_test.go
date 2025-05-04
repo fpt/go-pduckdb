@@ -3,9 +3,9 @@ package pduckdb
 import (
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/fpt/go-pduckdb/internal/duckdb"
+	"github.com/fpt/go-pduckdb/types"
 )
 
 func TestConnectionQuery(t *testing.T) {
@@ -13,8 +13,8 @@ func TestConnectionQuery(t *testing.T) {
 	conn := testConnection()
 
 	// Override the query function to return a successful result
-	conn.db.Query = func(_ *byte, sql string, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
-		if sql == "SELECT 1" {
+	conn.db.Query = func(_ duckdb.DuckDBConnection, sql *byte, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
+		if duckdb.GoString(sql) == "SELECT 1" {
 			return duckdb.DuckDBSuccess
 		}
 		return duckdb.DuckDBError
@@ -44,8 +44,8 @@ func TestConnectionExecute(t *testing.T) {
 	conn := testConnection()
 
 	// Override the query function for testing
-	conn.db.Query = func(_ *byte, sql string, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
-		if sql == "CREATE TABLE test (id INT)" {
+	conn.db.Query = func(_ duckdb.DuckDBConnection, sql *byte, result *duckdb.DuckDBResultRaw) duckdb.DuckDBState {
+		if duckdb.GoString(sql) == "CREATE TABLE test (id INT)" {
 			return duckdb.DuckDBSuccess
 		}
 		return duckdb.DuckDBError
@@ -69,15 +69,15 @@ func TestConnectionPrepare(t *testing.T) {
 	conn := testConnection()
 
 	// Set up prepare function
-	conn.db.Prepare = func(_, _ *byte, stmt *unsafe.Pointer) duckdb.DuckDBState {
+	conn.db.Prepare = func(_ duckdb.DuckDBConnection, _ *byte, stmt *duckdb.DuckDBPreparedStatement) duckdb.DuckDBState {
 		// Use a valid pointer conversion pattern
 		dummyVal := 12345
-		*stmt = unsafe.Pointer(&dummyVal)
+		*stmt = duckdb.DuckDBPreparedStatement(&dummyVal)
 		return duckdb.DuckDBSuccess
 	}
 
 	// Set up number of parameters function
-	conn.db.NumParams = func(unsafe.Pointer) int64 {
+	conn.db.NumParams = func(stmt duckdb.DuckDBPreparedStatement) int64 {
 		return 3
 	}
 
@@ -95,7 +95,7 @@ func TestConnectionPrepare(t *testing.T) {
 	}
 
 	// Test prepare error
-	conn.db.Prepare = func(_, _ *byte, _ *unsafe.Pointer) duckdb.DuckDBState {
+	conn.db.Prepare = func(_ duckdb.DuckDBConnection, _ *byte, stmt *duckdb.DuckDBPreparedStatement) duckdb.DuckDBState {
 		return duckdb.DuckDBError
 	}
 
@@ -364,7 +364,7 @@ func TestPreparedStatement(t *testing.T) {
 		}()
 
 		// Test binding JSON type
-		jsonObj := NewJSON(`{"name":"JSON Test","active":true,"count":42}`)
+		jsonObj := types.NewJSON(`{"name":"JSON Test","active":true,"count":42}`)
 
 		// Test binding a map
 		mapData := map[string]any{

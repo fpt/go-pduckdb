@@ -206,7 +206,12 @@ if hasValue {
 
 ## Limitations
 
-### Some types are not supported due to purego limitation
+### Unsupported types (yet)
+
+- List
+- Struct
+
+### Unsupported types due to purego limitation
 
 These types use struct return value which is not supported by purego in some platform.
 
