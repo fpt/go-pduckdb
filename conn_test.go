@@ -127,51 +127,6 @@ func TestPreparedStatementClose(t *testing.T) {
 	}
 }
 
-func TestPreparedStatementBindParameter(t *testing.T) {
-	// Create a test prepared statement
-	stmt := testPreparedStatement()
-
-	// Set up bind functions
-	stmt.conn.db.BindNull = func(unsafe.Pointer, int32) duckdb.DuckDBState {
-		return duckdb.DuckDBSuccess
-	}
-
-	stmt.conn.db.BindInt64 = func(unsafe.Pointer, int32, int64) duckdb.DuckDBState {
-		return duckdb.DuckDBSuccess
-	}
-
-	stmt.conn.db.BindDouble = func(unsafe.Pointer, int32, float64) duckdb.DuckDBState {
-		return duckdb.DuckDBSuccess
-	}
-
-	stmt.conn.db.BindVarchar = func(unsafe.Pointer, int32, *byte) duckdb.DuckDBState {
-		return duckdb.DuckDBSuccess
-	}
-
-	// Test binding different types
-	testCases := []interface{}{
-		nil,
-		int(42),
-		int64(42),
-		float64(3.14),
-		"test",
-	}
-
-	for i, val := range testCases {
-		err := stmt.BindParameter(i, val)
-		if err != nil {
-			t.Errorf("Failed to bind %T: %v", val, err)
-		}
-	}
-
-	// Test binding after close
-	setStatementClosed(stmt)
-	err := stmt.BindParameter(0, 42)
-	if err == nil {
-		t.Errorf("Expected error binding to closed statement")
-	}
-}
-
 func TestPreparedStatementExecute(t *testing.T) {
 	// Create a test prepared statement
 	stmt := testPreparedStatement()

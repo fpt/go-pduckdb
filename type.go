@@ -1,6 +1,7 @@
 package pduckdb
 
 import (
+	"database/sql/driver"
 	"reflect"
 	"time"
 )
@@ -30,6 +31,11 @@ func (d Date) ToTime() time.Time {
 	return epoch.AddDate(0, 0, int(d.Days))
 }
 
+// Value implements the driver.Valuer interface.
+func (d Date) Value() (driver.Value, error) {
+	return d.ToTime(), nil
+}
+
 // Time represents a DuckDB time
 type Time struct {
 	Micros int64
@@ -46,6 +52,11 @@ func (t Time) ToTime() time.Time {
 		Add(time.Duration(t.Micros) * time.Microsecond)
 }
 
+// Value implements the driver.Valuer interface.
+func (t Time) Value() (driver.Value, error) {
+	return t.ToTime(), nil
+}
+
 // Timestamp represents a DuckDB timestamp
 type Timestamp struct {
 	Micros int64
@@ -59,6 +70,11 @@ func NewTimestamp(micros int64) *Timestamp {
 // ToTime converts a DuckDB Timestamp to a Go time.Time
 func (ts Timestamp) ToTime() time.Time {
 	return time.Unix(0, ts.Micros*1000).UTC()
+}
+
+// Value implements the driver.Valuer interface.
+func (ts Timestamp) Value() (driver.Value, error) {
+	return ts.ToTime(), nil
 }
 
 // Interval is not supported.
@@ -109,30 +125,35 @@ func NewDecimal(width, scale uint8, value HugeInt) *Decimal {
 
 // JSON represents a DuckDB JSON value
 type JSON struct {
-	Value string
+	value string
 }
 
 // NewJSON creates a new JSON with the specified string value
 func NewJSON(value string) *JSON {
 	return &JSON{
-		Value: value,
+		value: value,
 	}
 }
 
 // String returns the string representation of the JSON value
-func (j JSON) String() string {
-	return j.Value
+func (j *JSON) String() string {
+	return j.value
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (j JSON) MarshalJSON() ([]byte, error) {
-	return []byte(j.Value), nil
+func (j *JSON) MarshalJSON() ([]byte, error) {
+	return []byte(j.value), nil
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface
 func (j *JSON) UnmarshalJSON(data []byte) error {
-	j.Value = string(data)
+	j.value = string(data)
 	return nil
+}
+
+// Value implements the driver.Valuer interface.
+func (j *JSON) Value() (driver.Value, error) {
+	return j.value, nil
 }
 
 // ColumnType represents a database column type
