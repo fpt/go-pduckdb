@@ -29,22 +29,15 @@ func TestResult() *Result {
 	mockRaw := DuckDBResultRaw{}
 
 	return &Result{
-		Raw:            mockRaw,
-		ColumnCount:    func(*DuckDBResultRaw) int64 { return 3 },
-		RowCount:       func(*DuckDBResultRaw) int64 { return 2 },
-		ColumnName:     func(*DuckDBResultRaw, int64) *byte { return nil },
-		ValueString:    func(*DuckDBResultRaw, int64, int32) *byte { return nil },
-		ValueDate:      func(*DuckDBResultRaw, int64, int32) int32 { return 0 },
-		ValueTime:      func(*DuckDBResultRaw, int64, int32) int64 { return 0 },
-		ValueTimestamp: func(*DuckDBResultRaw, int64, int32) int64 { return 0 },
-		DestroyResult:  func(*DuckDBResultRaw) {},
+		Raw: mockRaw,
+		Db:  TestDB(),
 	}
 }
 
 // MockTimeResult configures a Result to return specific date/time values
 func MockTimeResult(r *Result) {
 	// Mock current date (2025-05-01)
-	r.ValueDate = func(*DuckDBResultRaw, int64, int32) int32 {
+	r.Db.ValueDate = func(*DuckDBResultRaw, int64, int32) int32 {
 		// Calculate days since epoch (1970-01-01) to 2025-05-01
 		// First calculate seconds, then convert to days
 		epoch := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -54,12 +47,12 @@ func MockTimeResult(r *Result) {
 	}
 
 	// Mock time (14:30:45)
-	r.ValueTime = func(*DuckDBResultRaw, int64, int32) int64 {
+	r.Db.ValueTime = func(*DuckDBResultRaw, int64, int32) int64 {
 		return 14*60*60*1000000 + 30*60*1000000 + 45*1000000 // 14:30:45 in microseconds
 	}
 
 	// Mock timestamp (2025-05-01 14:30:45)
-	r.ValueTimestamp = func(*DuckDBResultRaw, int64, int32) int64 {
+	r.Db.ValueTimestamp = func(*DuckDBResultRaw, int64, int32) int64 {
 		t := time.Date(2025, 5, 1, 14, 30, 45, 0, time.UTC)
 		return t.Unix()*1000000 + int64(t.Nanosecond())/1000
 	}
@@ -74,7 +67,7 @@ func MockStringResult(r *Result, values []string) {
 	}
 
 	// For column names
-	r.ColumnName = func(_ *DuckDBResultRaw, col int64) *byte {
+	r.Db.ColumnName = func(_ *DuckDBResultRaw, col int64) *byte {
 		if int(col) < 3 { // We have 3 columns in our test
 			return cstrings[col]
 		}
@@ -82,7 +75,7 @@ func MockStringResult(r *Result, values []string) {
 	}
 
 	// For row values
-	r.ValueString = func(_ *DuckDBResultRaw, col int64, row int32) *byte {
+	r.Db.ValueString = func(_ *DuckDBResultRaw, col int64, row int32) *byte {
 		// The test expects:
 		// Values: ["1", "John", "john@example.com", "2", "Jane", "jane@example.com"]
 		// For Row 0: values[0]=1, values[1]=John, values[2]=john@example.com
