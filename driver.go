@@ -205,6 +205,12 @@ func (r *Rows) ColumnTypeNullable(index int) (nullable, ok bool) {
 	return false, false
 }
 
+// ColumnTypePrecisionScale returns column precision and scale.
+// Implements RowsColumnTypePrecisionScale
+func (r *Rows) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool) {
+	return r.result.DecimalInfo(int64(index))
+}
+
 // Additional interfaces to support context and named parameters
 
 // ConnBeginTx implements driver.ConnBeginTx
@@ -333,13 +339,17 @@ func (r *Result) RowsAffected() (int64, error) {
 
 // Ensure our driver implements necessary interfaces
 var (
-	_ driver.Driver           = (*Driver)(nil)
-	_ driver.Conn             = (*Conn)(nil)
-	_ driver.Stmt             = (*Stmt)(nil)
-	_ driver.StmtExecContext  = (*Stmt)(nil)
-	_ driver.StmtQueryContext = (*Stmt)(nil)
-	_ driver.Tx               = (*Tx)(nil)
-	_ driver.ConnBeginTx      = (*Conn)(nil)
-	_ driver.Result           = (*Result)(nil)
-	_ driver.Rows             = (*Rows)(nil)
+	_ driver.Driver                         = (*Driver)(nil)
+	_ driver.Conn                           = (*Conn)(nil)
+	_ driver.Stmt                           = (*Stmt)(nil)
+	_ driver.StmtExecContext                = (*Stmt)(nil)
+	_ driver.StmtQueryContext               = (*Stmt)(nil)
+	_ driver.Tx                             = (*Tx)(nil)
+	_ driver.ConnBeginTx                    = (*Conn)(nil)
+	_ driver.Result                         = (*Result)(nil)
+	_ driver.Rows                           = (*Rows)(nil)
+	_ driver.RowsColumnTypeScanType         = (*Rows)(nil)
+	_ driver.RowsColumnTypeDatabaseTypeName = (*Rows)(nil)
+	_ driver.RowsColumnTypeNullable         = (*Rows)(nil)
+	_ driver.RowsColumnTypePrecisionScale   = (*Rows)(nil)
 )

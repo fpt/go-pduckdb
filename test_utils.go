@@ -11,23 +11,6 @@ func testDuckDB() *DuckDB {
 	}
 }
 
-// testDuckDBResult creates a mock DuckDBResult for testing
-func testDuckDBResult() *DuckDBResult {
-	return &DuckDBResult{
-		internal: duckdb.TestResult(),
-	}
-}
-
-// mockTimeResult configures a result to return specific date/time values
-func mockTimeResult(r *DuckDBResult) {
-	duckdb.MockTimeResult(r.internal)
-}
-
-// mockStringResult configures a result to return specific string values
-func mockStringResult(r *DuckDBResult, values []string) {
-	duckdb.MockStringResult(r.internal, values)
-}
-
 // testConnection creates a mock connection for testing
 func testConnection() *DuckDBConnection {
 	var mockDuckDBConnection duckdb.DuckDBConnection

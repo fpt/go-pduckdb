@@ -99,7 +99,7 @@ func (c *DuckDBConnection) Query(sql string) (*DuckDBResult, error) {
 		return nil, ErrDuckDB{Message: "Query failed: " + sql}
 	}
 
-	internalResult := duckdb.CreateResult(c.db, rawResult)
+	internalResult := duckdb.NewResult(c.db, rawResult)
 
 	result := &DuckDBResult{
 		internal: internalResult,
@@ -471,13 +471,19 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 
 	// For types where we have limited support, fall back to string representation
 	case duckdb.DuckDBTypeDecimal:
-		// Convert to string for decimal
-		strVal, err := convert.ToString(value)
+		// Convert to double - DuckDB uses double internally for DECIMAL
+		doubleVal, err := convert.ToFloat64(value)
 		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DECIMAL string: %v", err)}
+			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DECIMAL: %v", err)}
 		}
-		if ps.conn.db.BindVarchar != nil {
-			cStr := duckdb.ToCString(strVal)
+
+		if ps.conn.db.BindDouble != nil {
+			state = ps.conn.db.BindDouble(ps.handle, idx, doubleVal)
+		} else if ps.conn.db.BindVarchar != nil {
+			// If bind_double is not available, fall back to string representation
+			// Format with high precision to preserve decimal places
+			decimalStr := fmt.Sprintf("%.15g", doubleVal)
+			cStr := duckdb.ToCString(decimalStr)
 			defer duckdb.FreeCString(cStr)
 			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
 		} else {
@@ -485,7 +491,7 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 		}
 
 	// For complex types, fall back to JSON representation
-	case duckdb.DuckDBTypeMap, duckdb.DuckDBTypeList, duckdb.DuckDBTypeStruct:
+	case duckdb.DuckDBTypeMap:
 		jsonObj, err := marshalToJSON(value)
 		if err != nil {
 			return ErrDuckDB{Message: fmt.Sprintf("Failed to marshal JSON: %v", err)}
@@ -497,6 +503,12 @@ func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramTy
 		} else {
 			return ErrDuckDB{Message: "No suitable bind function available for JSON/complex types"}
 		}
+
+	case duckdb.DuckDBTypeList:
+		return ErrDuckDB{Message: "List type is not supported"}
+
+	case duckdb.DuckDBTypeStruct:
+		return ErrDuckDB{Message: "Struct type is not supported"}
 
 	default:
 		return ErrDuckDB{Message: fmt.Sprintf("Unsupported parameter type: %s", paramType)}
@@ -530,7 +542,7 @@ func (ps *PreparedStatement) Execute() (*DuckDBResult, error) {
 		return nil, ErrDuckDB{Message: "Failed to execute prepared statement"}
 	}
 
-	internalResult := duckdb.CreateResult(ps.conn.db, rawResult)
+	internalResult := duckdb.NewResult(ps.conn.db, rawResult)
 	result := &DuckDBResult{
 		internal: internalResult,
 	}

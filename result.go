@@ -71,6 +71,34 @@ func (r *DuckDBResult) ValueNull(column int64, row int32) bool {
 	return r.internal.IsNull(column, row)
 }
 
+// DecimalInfo returns the precision and scale for decimal types
+func (r *DuckDBResult) DecimalInfo(column int64) (precision, scale int64, ok bool) {
+	// Get the column type
+	colType := r.ColumnType(column)
+
+	// Check if it's a decimal type
+	if colType != duckdb.DuckDBTypeDecimal {
+		return 0, 0, false
+	}
+
+	// Get the logical type
+	logicalType := r.ColumnLogicalType(column)
+
+	// If we don't have a logical type, we can't get precision and scale
+	if logicalType == nil {
+		return 0, 0, false
+	}
+
+	// Get precision and scale from the logical type
+	if r.internal.Db.DecimalWidth != nil && r.internal.Db.DecimalScale != nil {
+		precision := int64(r.internal.Db.DecimalWidth(logicalType))
+		scale := int64(r.internal.Db.DecimalScale(logicalType))
+		return precision, scale, true
+	}
+
+	return 0, 0, false
+}
+
 // Close destroys the result and frees associated resources
 func (r *DuckDBResult) Close() {
 	r.internal.Close()
