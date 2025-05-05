@@ -7,6 +7,7 @@ run: ## Run the application
 	CGO_ENABLED=0 go run example/columntypes/main.go
 	CGO_ENABLED=0 go run example/enhancedtypes/main.go
 	CGO_ENABLED=0 go run example/json/main.go
+	CGO_ENABLED=0 go run example/multistatement/main.go
 
 test: ## Run unit tests
 	go test -v ./...
