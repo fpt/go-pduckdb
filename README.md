@@ -8,13 +8,14 @@ Uses [purego](https://github.com/ebitengine/purego) to interface with DuckDB's n
 ## Features
 
 - Pure Go implementation - no CGO required
-- Support for all DuckDB data types including DATE, TIME, and TIMESTAMP
-- Connection pooling
-- Query execution and result handling
-- Clear error reporting
+- Support for most DuckDB data types including DATE, TIME, TIMESTAMP, and DECIMAL
+- SQL query execution and result handling
+- Database access through standard database/sql interface
+- Clear error reporting and propagation
 - Cross-platform compatibility
-- Standard database/sql interface support
-- Support for prepared statements with automatic type inference
+- Parameter binding with automatic type conversion
+- Support for prepared statements with parameter type inference
+- Transaction support
 
 ## Installation
 
@@ -220,17 +221,33 @@ These types use struct return value which is not supported by purego in some pla
 
 ## Project Structure
 
-This project follows the [standard Go project layout](https://go.dev/doc/modules/layout) with:
+This project follows the [standard Go project layout](https://go.dev/doc/modules/layout):
 
 ```
 go-pduckdb/
 ├── conn.go          # Connection handling
-├── datetime.go      # Date/time type support
+├── driver.go        # database/sql driver implementation
+├── error.go         # Error handling
+├── extensions.go    # DuckDB extensions support
 ├── pduckdb.go       # Core functionality
 ├── result.go        # Result processing
-├── type.go          # Type definitions
 ├── *_test.go        # Unit tests
-└── example/         # Example code
+├── example/         # Example code
+│   ├── columntypes/     # Column type demonstration
+│   ├── databasesql/     # database/sql usage examples
+│   ├── databasesql2/    # Additional database/sql examples
+│   ├── enhancedtypes/   # Enhanced type support examples
+│   ├── json/            # JSON handling examples
+│   └── simple/          # Simple API usage examples
+├── internal/        # Internal implementation
+│   ├── convert/         # Type conversion utilities
+│   ├── duckdb/          # Low-level DuckDB bindings
+│   └── integ/           # Integration test infrastructure
+└── types/           # Custom type definitions
+    ├── datetime.go      # Date/time type implementations
+    ├── json.go          # JSON support
+    ├── slice.go         # Slice handling
+    └── sql.go           # SQL specific types
 ```
 
 ## Contributing
