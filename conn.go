@@ -1,13 +1,9 @@
 package pduckdb
 
 import (
-	"encoding/json"
 	"fmt"
-	"math"
 
-	"github.com/fpt/go-pduckdb/internal/convert"
 	"github.com/fpt/go-pduckdb/internal/duckdb"
-	"github.com/fpt/go-pduckdb/types"
 )
 
 // DuckDBConnection represents a connection to a DuckDB database
@@ -160,8 +156,7 @@ func (c *DuckDBConnection) Prepare(query string) (*PreparedStatement, error) {
 
 // Close closes the connection
 func (c *DuckDBConnection) Close() {
-	// Note: The DuckDB API doesn't have connection close function
-	// The connection is closed when the database is closed
+	c.db.Disconnect(&c.handle)
 }
 
 // Close releases resources associated with a prepared statement
@@ -212,310 +207,13 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 	}
 
 	// Use DuckDB parameter type to guide binding if available
-	if paramType != duckdb.DuckDBTypeInvalid {
-		return ps.bindWithDuckDBType(paramIdx, value, paramType)
+	if paramType == duckdb.DuckDBTypeInvalid {
+		return ErrDuckDB{Message: "Parameter type is invalid"}
 	}
 
-	return ErrDuckDB{Message: "Parameter type not available"}
-}
-
-// bindWithDuckDBType binds a parameter value using the DuckDB type information
-func (ps *PreparedStatement) bindWithDuckDBType(paramIdx int, value any, paramType duckdb.DuckDBType) error {
-	var state duckdb.DuckDBState
-	idx := int32(paramIdx)
-
-	switch paramType {
-	case duckdb.DuckDBTypeBoolean:
-		// Convert to boolean
-		boolVal, err := convert.ToBoolean(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to BOOLEAN: %v", err)}
-		}
-		if ps.conn.db.BindBoolean != nil {
-			state = ps.conn.db.BindBoolean(ps.handle, idx, boolVal)
-		} else if ps.conn.db.BindInt32 != nil {
-			intVal := int32(0)
-			if boolVal {
-				intVal = 1
-			}
-			state = ps.conn.db.BindInt32(ps.handle, idx, intVal)
-		} else if ps.conn.db.BindInt64 != nil {
-			intVal := int64(0)
-			if boolVal {
-				intVal = 1
-			}
-			state = ps.conn.db.BindInt64(ps.handle, idx, intVal)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for BOOLEAN"}
-		}
-
-	case duckdb.DuckDBTypeTinyint:
-		// Convert to int8
-		intVal, err := convert.ToInt8(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to TINYINT: %v", err)}
-		}
-		if ps.conn.db.BindInt8 != nil {
-			state = ps.conn.db.BindInt8(ps.handle, idx, intVal)
-		} else if ps.conn.db.BindInt32 != nil {
-			state = ps.conn.db.BindInt32(ps.handle, idx, int32(intVal))
-		} else if ps.conn.db.BindInt64 != nil {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(intVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for TINYINT"}
-		}
-
-	case duckdb.DuckDBTypeSmallint:
-		// Convert to int16
-		intVal, err := convert.ToInt16(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to SMALLINT: %v", err)}
-		}
-		if ps.conn.db.BindInt16 != nil {
-			state = ps.conn.db.BindInt16(ps.handle, idx, intVal)
-		} else if ps.conn.db.BindInt32 != nil {
-			state = ps.conn.db.BindInt32(ps.handle, idx, int32(intVal))
-		} else if ps.conn.db.BindInt64 != nil {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(intVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for SMALLINT"}
-		}
-
-	case duckdb.DuckDBTypeInteger:
-		// Convert to int32
-		intVal, err := convert.ToInt32(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to INTEGER: %v", err)}
-		}
-		if ps.conn.db.BindInt32 != nil {
-			state = ps.conn.db.BindInt32(ps.handle, idx, intVal)
-		} else if ps.conn.db.BindInt64 != nil {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(intVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for INTEGER"}
-		}
-
-	case duckdb.DuckDBTypeBigint:
-		// Convert to int64
-		intVal, err := convert.ToInt64(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to BIGINT: %v", err)}
-		}
-		if ps.conn.db.BindInt64 != nil {
-			state = ps.conn.db.BindInt64(ps.handle, idx, intVal)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for BIGINT"}
-		}
-
-	case duckdb.DuckDBTypeUTinyint:
-		// Convert to uint8
-		uintVal, err := convert.ToUint8(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to UTINYINT: %v", err)}
-		}
-		if ps.conn.db.BindUint8 != nil {
-			state = ps.conn.db.BindUint8(ps.handle, idx, uintVal)
-		} else if ps.conn.db.BindInt32 != nil {
-			state = ps.conn.db.BindInt32(ps.handle, idx, int32(uintVal))
-		} else if ps.conn.db.BindInt64 != nil {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(uintVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for UTINYINT"}
-		}
-
-	case duckdb.DuckDBTypeUSmallint:
-		// Convert to uint16
-		uintVal, err := convert.ToUint16(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to USMALLINT: %v", err)}
-		}
-		if ps.conn.db.BindUint16 != nil {
-			state = ps.conn.db.BindUint16(ps.handle, idx, uintVal)
-		} else if ps.conn.db.BindInt32 != nil && int32(uintVal) >= 0 {
-			state = ps.conn.db.BindInt32(ps.handle, idx, int32(uintVal))
-		} else if ps.conn.db.BindInt64 != nil {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(uintVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for USMALLINT"}
-		}
-
-	case duckdb.DuckDBTypeUInteger:
-		// Convert to uint32
-		uintVal, err := convert.ToUint32(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to UINTEGER: %v", err)}
-		}
-		if ps.conn.db.BindUint32 != nil {
-			state = ps.conn.db.BindUint32(ps.handle, idx, uintVal)
-		} else if ps.conn.db.BindInt64 != nil && int64(uintVal) >= 0 {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(uintVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for UINTEGER"}
-		}
-
-	case duckdb.DuckDBTypeUBigint:
-		// Convert to uint64
-		uintVal, err := convert.ToUint64(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to UBIGINT: %v", err)}
-		}
-		if ps.conn.db.BindUint64 != nil {
-			state = ps.conn.db.BindUint64(ps.handle, idx, uintVal)
-		} else if ps.conn.db.BindInt64 != nil && uintVal <= uint64(math.MaxInt64) {
-			state = ps.conn.db.BindInt64(ps.handle, idx, int64(uintVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for UBIGINT"}
-		}
-
-	case duckdb.DuckDBTypeFloat:
-		// Convert to float32
-		floatVal, err := convert.ToFloat32(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to FLOAT: %v", err)}
-		}
-		if ps.conn.db.BindFloat != nil {
-			state = ps.conn.db.BindFloat(ps.handle, idx, floatVal)
-		} else if ps.conn.db.BindDouble != nil {
-			state = ps.conn.db.BindDouble(ps.handle, idx, float64(floatVal))
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for FLOAT"}
-		}
-
-	case duckdb.DuckDBTypeDouble:
-		// Convert to float64
-		doubleVal, err := convert.ToFloat64(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DOUBLE: %v", err)}
-		}
-		if ps.conn.db.BindDouble != nil {
-			state = ps.conn.db.BindDouble(ps.handle, idx, doubleVal)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for DOUBLE"}
-		}
-
-	case duckdb.DuckDBTypeVarchar:
-		// Convert to string
-		strVal, err := convert.ToString(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to VARCHAR: %v", err)}
-		}
-		if ps.conn.db.BindVarchar != nil {
-			cStr := duckdb.ToCString(strVal)
-			defer duckdb.FreeCString(cStr)
-			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for VARCHAR"}
-		}
-
-	case duckdb.DuckDBTypeBlob:
-		// DuckDBTypeBlob is not supported.
-		return ErrDuckDB{Message: "Blob type is not supported"}
-
-	case duckdb.DuckDBTypeDate:
-		// Convert to Date
-		dateVal, err := convert.ToDate(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DATE: %v", err)}
-		}
-		if ps.conn.db.BindDate != nil {
-			state = ps.conn.db.BindDate(ps.handle, idx, int32(dateVal.Days))
-		} else if ps.conn.db.BindVarchar != nil {
-			dateStr := dateVal.ToTime().Format("2006-01-02")
-			cStr := duckdb.ToCString(dateStr)
-			defer duckdb.FreeCString(cStr)
-			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for DATE"}
-		}
-
-	case duckdb.DuckDBTypeTime:
-		// Convert to Time
-		timeVal, err := convert.ToTime(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to TIME: %v", err)}
-		}
-		if ps.conn.db.BindTime != nil {
-			state = ps.conn.db.BindTime(ps.handle, idx, timeVal.Micros)
-		} else if ps.conn.db.BindVarchar != nil {
-			timeStr := timeVal.ToTime().Format("15:04:05.999999")
-			cStr := duckdb.ToCString(timeStr)
-			defer duckdb.FreeCString(cStr)
-			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for TIME"}
-		}
-
-	case duckdb.DuckDBTypeTimestamp:
-		// Convert to timestamp (time.Time)
-		timestampVal, err := convert.ToTimestamp(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to TIMESTAMP: %v", err)}
-		}
-		if ps.conn.db.BindTimestamp != nil {
-			// Convert to DuckDB timestamp (microseconds since epoch)
-			micros := timestampVal.UnixNano() / 1000
-			state = ps.conn.db.BindTimestamp(ps.handle, idx, micros)
-		} else if ps.conn.db.BindVarchar != nil {
-			// Fall back to string representation
-			timestampStr := timestampVal.Format("2006-01-02 15:04:05.999999")
-			cStr := duckdb.ToCString(timestampStr)
-			defer duckdb.FreeCString(cStr)
-			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for TIMESTAMP"}
-		}
-
-	case duckdb.DuckDBTypeInterval:
-		// DuckDBTypeInterval is not supported due to purego limitations
-		return ErrDuckDB{Message: "Interval type is not supported"}
-
-	// For types where we have limited support, fall back to string representation
-	case duckdb.DuckDBTypeDecimal:
-		// Convert to double - DuckDB uses double internally for DECIMAL
-		doubleVal, err := convert.ToFloat64(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to convert value to DECIMAL: %v", err)}
-		}
-
-		if ps.conn.db.BindDouble != nil {
-			state = ps.conn.db.BindDouble(ps.handle, idx, doubleVal)
-		} else if ps.conn.db.BindVarchar != nil {
-			// If bind_double is not available, fall back to string representation
-			// Format with high precision to preserve decimal places
-			decimalStr := fmt.Sprintf("%.15g", doubleVal)
-			cStr := duckdb.ToCString(decimalStr)
-			defer duckdb.FreeCString(cStr)
-			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for DECIMAL"}
-		}
-
-	// For complex types, fall back to JSON representation
-	case duckdb.DuckDBTypeMap:
-		jsonObj, err := marshalToJSON(value)
-		if err != nil {
-			return ErrDuckDB{Message: fmt.Sprintf("Failed to marshal JSON: %v", err)}
-		}
-		if ps.conn.db.BindVarchar != nil {
-			cStr := duckdb.ToCString(jsonObj.String())
-			defer duckdb.FreeCString(cStr)
-			state = ps.conn.db.BindVarchar(ps.handle, idx, cStr)
-		} else {
-			return ErrDuckDB{Message: "No suitable bind function available for JSON/complex types"}
-		}
-
-	case duckdb.DuckDBTypeList:
-		return ErrDuckDB{Message: "List type is not supported"}
-
-	case duckdb.DuckDBTypeStruct:
-		return ErrDuckDB{Message: "Struct type is not supported"}
-
-	default:
-		return ErrDuckDB{Message: fmt.Sprintf("Unsupported parameter type: %s", paramType)}
-	}
-
-	if state != duckdb.DuckDBSuccess {
-		return ErrDuckDB{Message: fmt.Sprintf("Failed to bind parameter of type %s", paramType)}
+	err := duckdb.BindParameter(ps.conn.db, ps.handle, paramIdx, value, paramType)
+	if err != nil {
+		return ErrDuckDB{Message: fmt.Sprintf("Failed to bind parameter: %v", err)}
 	}
 
 	return nil
@@ -548,13 +246,4 @@ func (ps *PreparedStatement) Execute() (*DuckDBResult, error) {
 	}
 
 	return result, nil
-}
-
-// marshalToJSON converts any value to a JSON object
-func marshalToJSON(value any) (*types.JSON, error) {
-	jsonBytes, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	return types.NewJSON(string(jsonBytes)), nil
 }
