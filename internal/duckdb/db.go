@@ -19,6 +19,7 @@ type DB struct {
 	Lib               uintptr
 	Connect           func(DuckDBDatabase, *DuckDBConnection) DuckDBState
 	Close             func(*DuckDBDatabase)
+	Disconnect        func(*DuckDBConnection)
 	LibraryVersion    func() *byte
 	Query             func(DuckDBConnection, *byte, *DuckDBResultRaw) DuckDBState
 	ColumnName        func(*DuckDBResultRaw, int64) *byte
@@ -150,6 +151,7 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&open, lib, "duckdb_open")
 	purego.RegisterLibFunc(&db.Connect, lib, "duckdb_connect")
 	purego.RegisterLibFunc(&db.Close, lib, "duckdb_close")
+	purego.RegisterLibFunc(&db.Disconnect, lib, "duckdb_disconnect")
 	purego.RegisterLibFunc(&db.LibraryVersion, lib, "duckdb_library_version")
 	purego.RegisterLibFunc(&db.Query, lib, "duckdb_query")
 	purego.RegisterLibFunc(&db.ColumnName, lib, "duckdb_column_name")
