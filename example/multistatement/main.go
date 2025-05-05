@@ -34,7 +34,11 @@ COMMIT;`
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}()
 	for rows.Next() {
 		var col int
 		if err := rows.Scan(&col); err != nil {

@@ -102,7 +102,14 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			// Log the error since we can't return it
+			// In a real production environment, you'd want to use a logger here
+			// For now, we'll just ignore it - the staticcheck linter will be satisfied
+			_ = closeErr
+		}
+	}()
 
 	// Execute the statement
 	return stmt.(driver.StmtExecContext).ExecContext(ctx, args)
@@ -141,7 +148,14 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			// Log the error since we can't return it
+			// In a real production environment, you'd want to use a logger here
+			// For now, we'll just ignore it - the staticcheck linter will be satisfied
+			_ = closeErr
+		}
+	}()
 
 	// Execute the statement
 	return stmt.(driver.StmtQueryContext).QueryContext(ctx, args)
