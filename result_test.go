@@ -32,7 +32,7 @@ func TestResultColumnName(t *testing.T) {
 
 	// Test column name retrieval
 	for i, expected := range colNames {
-		if name := result.ColumnName(int32(i)); name != expected {
+		if name := result.ColumnName(int64(i)); name != expected {
 			t.Errorf("Column %d: expected name %s, got %s", i, expected, name)
 		}
 	}

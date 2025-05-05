@@ -7,14 +7,15 @@ import (
 
 // TestDB creates a mock DB for testing
 func TestDB() *DB {
+	var mockDuckDBDatabase DuckDBDatabase
 	return &DB{
-		Handle:         new(byte),
-		Connect:        func(*byte, **byte) DuckDBState { return DuckDBSuccess },
-		Close:          func(**byte) {},
-		Query:          func(*byte, string, *DuckDBResultRaw) DuckDBState { return DuckDBSuccess },
-		ColumnCount:    func(*DuckDBResultRaw) int32 { return 0 },
+		Handle:         mockDuckDBDatabase,
+		Connect:        func(DuckDBDatabase, *DuckDBConnection) DuckDBState { return DuckDBSuccess },
+		Close:          func(*DuckDBDatabase) {},
+		Query:          func(DuckDBConnection, *byte, *DuckDBResultRaw) DuckDBState { return DuckDBSuccess },
+		ColumnCount:    func(*DuckDBResultRaw) int64 { return 0 },
 		RowCount:       func(*DuckDBResultRaw) int64 { return 0 },
-		ColumnName:     func(*DuckDBResultRaw, int32) *byte { return nil },
+		ColumnName:     func(*DuckDBResultRaw, int64) *byte { return nil },
 		ValueString:    func(*DuckDBResultRaw, int64, int32) *byte { return nil },
 		ValueDate:      func(*DuckDBResultRaw, int64, int32) int32 { return 0 },
 		ValueTime:      func(*DuckDBResultRaw, int64, int32) int64 { return 0 },
@@ -29,9 +30,9 @@ func TestResult() *Result {
 
 	return &Result{
 		Raw:            mockRaw,
-		ColumnCount:    func(*DuckDBResultRaw) int32 { return 3 },
+		ColumnCount:    func(*DuckDBResultRaw) int64 { return 3 },
 		RowCount:       func(*DuckDBResultRaw) int64 { return 2 },
-		ColumnName:     func(*DuckDBResultRaw, int32) *byte { return nil },
+		ColumnName:     func(*DuckDBResultRaw, int64) *byte { return nil },
 		ValueString:    func(*DuckDBResultRaw, int64, int32) *byte { return nil },
 		ValueDate:      func(*DuckDBResultRaw, int64, int32) int32 { return 0 },
 		ValueTime:      func(*DuckDBResultRaw, int64, int32) int64 { return 0 },
@@ -73,7 +74,7 @@ func MockStringResult(r *Result, values []string) {
 	}
 
 	// For column names
-	r.ColumnName = func(_ *DuckDBResultRaw, col int32) *byte {
+	r.ColumnName = func(_ *DuckDBResultRaw, col int64) *byte {
 		if int(col) < 3 { // We have 3 columns in our test
 			return cstrings[col]
 		}

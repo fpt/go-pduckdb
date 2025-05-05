@@ -1,4 +1,4 @@
-package pduckdb
+package types
 
 import (
 	"testing"

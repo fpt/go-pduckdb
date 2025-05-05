@@ -24,7 +24,7 @@ func NewDuckDB(path string) (*DuckDB, error) {
 
 // Connect creates a new connection to the database
 func (d *DuckDB) Connect() (*DuckDBConnection, error) {
-	var handle *byte
+	var handle duckdb.DuckDBConnection
 	state := d.db.Connect(d.db.Handle, &handle)
 	if state != duckdb.DuckDBSuccess {
 		return nil, ErrDuckDB{Message: "Failed to connect to database"}

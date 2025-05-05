@@ -1,7 +1,9 @@
-// Package pduckdb provides a pure Go DuckDB driver
-package pduckdb
+// Package types
+package types
 
-import "time"
+import (
+	"time"
+)
 
 // DuckDBDate represents a date value in DuckDB
 // In DuckDB, dates are stored as days since 1970-01-01

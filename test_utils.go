@@ -30,8 +30,9 @@ func mockStringResult(r *DuckDBResult, values []string) {
 
 // testConnection creates a mock connection for testing
 func testConnection() *DuckDBConnection {
+	var mockDuckDBConnection duckdb.DuckDBConnection
 	return &DuckDBConnection{
-		handle: new(byte),
+		handle: mockDuckDBConnection,
 		db:     duckdb.TestDB(),
 	}
 }
