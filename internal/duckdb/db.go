@@ -27,6 +27,7 @@ type DB struct {
 	ColumnLogicalType func(*DuckDBResultRaw, int64) DuckDBLogicalType
 	ColumnCount       func(*DuckDBResultRaw) int64
 	RowCount          func(*DuckDBResultRaw) int64
+	RowsChanged       func(*DuckDBResultRaw) int64
 	ValueString       func(*DuckDBResultRaw, int64, int32) *byte
 	ValueDate         func(*DuckDBResultRaw, int64, int32) int32
 	ValueTime         func(*DuckDBResultRaw, int64, int32) int64
@@ -158,13 +159,9 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&db.ColumnType, lib, "duckdb_column_type")
 	purego.RegisterLibFunc(&db.ColumnLogicalType, lib, "duckdb_column_logical_type")
 	purego.RegisterLibFunc(&db.ColumnCount, lib, "duckdb_column_count")
-	purego.RegisterLibFunc(&db.RowCount, lib, "duckdb_row_count")
+	purego.RegisterLibFunc(&db.RowCount, lib, "duckdb_row_count") // WARN: future deprecation
+	purego.RegisterLibFunc(&db.RowsChanged, lib, "duckdb_rows_changed")
 	purego.RegisterLibFunc(&db.ValueString, lib, "duckdb_value_string")
-
-	// Register date and time functions
-	purego.RegisterLibFunc(&db.ValueDate, lib, "duckdb_value_date")
-	purego.RegisterLibFunc(&db.ValueTime, lib, "duckdb_value_time")
-	purego.RegisterLibFunc(&db.ValueTimestamp, lib, "duckdb_value_timestamp")
 
 	// Register additional value functions
 	purego.RegisterLibFunc(&db.ValueBoolean, lib, "duckdb_value_boolean")
@@ -178,6 +175,9 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&db.ValueUint64, lib, "duckdb_value_uint64")
 	purego.RegisterLibFunc(&db.ValueFloat, lib, "duckdb_value_float")
 	purego.RegisterLibFunc(&db.ValueDouble, lib, "duckdb_value_double")
+	purego.RegisterLibFunc(&db.ValueDate, lib, "duckdb_value_date")
+	purego.RegisterLibFunc(&db.ValueTime, lib, "duckdb_value_time")
+	purego.RegisterLibFunc(&db.ValueTimestamp, lib, "duckdb_value_timestamp")
 	purego.RegisterLibFunc(&db.ValueVarchar, lib, "duckdb_value_varchar")
 	// duckdb_value_blob is not supported due to purego limitations
 	// duckdb_value_interval is not supported due to purego limitations

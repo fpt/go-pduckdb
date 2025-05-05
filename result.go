@@ -13,62 +13,75 @@ type DuckDBResult struct {
 
 // ColumnCount returns the number of columns in the result
 func (r *DuckDBResult) ColumnCount() int64 {
-	return r.internal.GetColumnCount()
+	return r.internal.ColumnCount()
 }
 
 // RowCount returns the number of rows in the result
 func (r *DuckDBResult) RowCount() int64 {
-	return r.internal.GetRowCount()
+	return r.internal.RowCount()
+}
+
+// RowsChanged returns the number of rows changed by the last operation
+func (r *DuckDBResult) RowsChanged() int64 {
+	return r.internal.RowsChanged()
 }
 
 // ColumnName returns the name of the column at the given index
 func (r *DuckDBResult) ColumnName(column int64) string {
-	return r.internal.GetColumnName(column)
+	return r.internal.ColumnName(column)
+}
+
+func (r *DuckDBResult) ColumnNames() []string {
+	names := make([]string, r.ColumnCount())
+	for i := int64(0); i < r.ColumnCount(); i++ {
+		names[i] = r.ColumnName(i)
+	}
+	return names
 }
 
 // ColumnType returns the logical type of the column at the given index
 func (r *DuckDBResult) ColumnType(column int64) duckdb.DuckDBType {
-	return r.internal.GetColumnType(column)
+	return r.internal.ColumnType(column)
 }
 
 // ColumnType returns the logical type of the column at the given index
 func (r *DuckDBResult) ColumnLogicalType(column int64) duckdb.DuckDBLogicalType {
-	return r.internal.GetColumnLogicalType(column)
+	return r.internal.ColumnLogicalType(column)
 }
 
 // ValueString returns the string value at the given row and column
 func (r *DuckDBResult) ValueString(column int64, row int32) (string, bool) {
-	return r.internal.GetValueString(column, row)
+	return r.internal.ValueString(column, row)
 }
 
 // ValueDate returns the date value at the given column and row
 func (r *DuckDBResult) ValueDate(column int64, row int32) (time.Time, bool) {
-	return r.internal.GetValueDate(column, row)
+	return r.internal.ValueDate(column, row)
 }
 
 // ValueTime returns the time value at the given column and row
 func (r *DuckDBResult) ValueTime(column int64, row int32) (time.Time, bool) {
-	return r.internal.GetValueTime(column, row)
+	return r.internal.ValueTime(column, row)
 }
 
 // ValueTimestamp returns the timestamp (datetime) value at the given column and row
 func (r *DuckDBResult) ValueTimestamp(column int64, row int32) (time.Time, bool) {
-	return r.internal.GetValueTimestamp(column, row)
+	return r.internal.ValueTimestamp(column, row)
 }
 
 // ValueBoolean returns the boolean value at the given column and row
 func (r *DuckDBResult) ValueBoolean(column int64, row int32) (bool, bool) {
-	return r.internal.GetValueBoolean(column, row)
+	return r.internal.ValueBoolean(column, row)
 }
 
 // ValueDouble returns the double (float64) value at the given column and row
 func (r *DuckDBResult) ValueDouble(column int64, row int32) (float64, bool) {
-	return r.internal.GetValueDouble(column, row)
+	return r.internal.ValueDouble(column, row)
 }
 
 // ValueNull checks if the value at the given column and row is NULL
 func (r *DuckDBResult) ValueNull(column int64, row int32) bool {
-	return r.internal.IsNull(column, row)
+	return r.internal.ValueNull(column, row)
 }
 
 // DecimalInfo returns the precision and scale for decimal types
