@@ -33,22 +33,23 @@ type DB struct {
 	ValueTime         func(*DuckDBResultRaw, int64, int32) int64
 	ValueTimestamp    func(*DuckDBResultRaw, int64, int32) int64
 	// Additional value functions
-	ValueBoolean   func(*DuckDBResultRaw, int64, int32) bool
-	ValueInt8      func(*DuckDBResultRaw, int64, int32) int8
-	ValueInt16     func(*DuckDBResultRaw, int64, int32) int16
-	ValueInt32     func(*DuckDBResultRaw, int64, int32) int32
-	ValueInt64     func(*DuckDBResultRaw, int64, int32) int64
-	ValueUint8     func(*DuckDBResultRaw, int64, int32) uint8
-	ValueUint16    func(*DuckDBResultRaw, int64, int32) uint16
-	ValueUint32    func(*DuckDBResultRaw, int64, int32) uint32
-	ValueUint64    func(*DuckDBResultRaw, int64, int32) uint64
-	ValueFloat     func(*DuckDBResultRaw, int64, int32) float32
-	ValueDouble    func(*DuckDBResultRaw, int64, int32) float64
-	ValueVarchar   func(*DuckDBResultRaw, int64, int32) *byte
-	ValueNull      func(*DuckDBResultRaw, int64, int32) bool
-	ValueListSize  func(*DuckDBResultRaw, int64, int32) int32
-	ValueListChild func(*DuckDBResultRaw, int64, int32) DuckDBValue
-	DestroyResult  func(*DuckDBResultRaw)
+	ValueBoolean         func(*DuckDBResultRaw, int64, int32) bool
+	ValueInt8            func(*DuckDBResultRaw, int64, int32) int8
+	ValueInt16           func(*DuckDBResultRaw, int64, int32) int16
+	ValueInt32           func(*DuckDBResultRaw, int64, int32) int32
+	ValueInt64           func(*DuckDBResultRaw, int64, int32) int64
+	ValueUint8           func(*DuckDBResultRaw, int64, int32) uint8
+	ValueUint16          func(*DuckDBResultRaw, int64, int32) uint16
+	ValueUint32          func(*DuckDBResultRaw, int64, int32) uint32
+	ValueUint64          func(*DuckDBResultRaw, int64, int32) uint64
+	ValueFloat           func(*DuckDBResultRaw, int64, int32) float32
+	ValueDouble          func(*DuckDBResultRaw, int64, int32) float64
+	ValueVarchar         func(*DuckDBResultRaw, int64, int32) *byte
+	ValueVarcharInternal func(*DuckDBResultRaw, int64, int32) *byte
+	ValueNull            func(*DuckDBResultRaw, int64, int32) bool
+	ValueListSize        func(*DuckDBResultRaw, int64, int32) int32
+	ValueListChild       func(*DuckDBResultRaw, int64, int32) DuckDBValue
+	DestroyResult        func(*DuckDBResultRaw)
 
 	// Prepared statement functions
 	Prepare         func(DuckDBConnection, *byte, *DuckDBPreparedStatement) DuckDBState
@@ -161,7 +162,6 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&db.ColumnCount, lib, "duckdb_column_count")
 	purego.RegisterLibFunc(&db.RowCount, lib, "duckdb_row_count") // WARN: future deprecation
 	purego.RegisterLibFunc(&db.RowsChanged, lib, "duckdb_rows_changed")
-	purego.RegisterLibFunc(&db.ValueString, lib, "duckdb_value_string")
 
 	// Register additional value functions
 	purego.RegisterLibFunc(&db.ValueBoolean, lib, "duckdb_value_boolean")
@@ -179,6 +179,8 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&db.ValueTime, lib, "duckdb_value_time")
 	purego.RegisterLibFunc(&db.ValueTimestamp, lib, "duckdb_value_timestamp")
 	purego.RegisterLibFunc(&db.ValueVarchar, lib, "duckdb_value_varchar")
+	purego.RegisterLibFunc(&db.ValueVarcharInternal, lib, "duckdb_value_varchar_internal")
+	// duckdb_value_string is not supported due to purego limitations
 	// duckdb_value_blob is not supported due to purego limitations
 	// duckdb_value_interval is not supported due to purego limitations
 	// purego: struct return values only supported on darwin arm64 & amd64

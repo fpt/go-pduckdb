@@ -51,8 +51,9 @@ func (r *Result) ColumnLogicalType(column int64) DuckDBLogicalType {
 }
 
 // ValueString returns the string value at the given row and column
+// NOTE: This is a wrapper around ValueVarchar to avoid purego limitations.
 func (r *Result) ValueString(column int64, row int32) (string, bool) {
-	ptr := r.Db.ValueString(&r.Raw, column, row)
+	ptr := r.Db.ValueVarchar(&r.Raw, column, row)
 	if ptr == nil {
 		return "", false // NULL value
 	}
@@ -282,8 +283,8 @@ func (r *Result) ValueDouble(column int64, row int32) (float64, bool) {
 // IsNull returns true if the value at the given column and row is NULL
 func (r *Result) ValueNull(column int64, row int32) bool {
 	if r.Db.ValueNull == nil {
-		// Fall back to checking if string value is nil
-		return r.Db.ValueString(&r.Raw, column, row) == nil
+		// Fall back to checking if varchar value is nil
+		return r.Db.ValueVarchar(&r.Raw, column, row) == nil
 	}
 	return r.Db.ValueNull(&r.Raw, column, row)
 }
