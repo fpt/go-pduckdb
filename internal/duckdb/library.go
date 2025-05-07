@@ -112,10 +112,10 @@ func getLinuxLibraryPaths() []string {
 	return locations
 }
 
-// GoString converts a C string to a Go string
-func GoString(c *byte) string {
+// GoBytes converts a C string to a Go byte slice
+func GoBytes(c *byte) []byte {
 	if c == nil {
-		return ""
+		return nil
 	}
 
 	// Use a safer approach with slices
@@ -130,7 +130,12 @@ func GoString(c *byte) string {
 		bytes = append(bytes, b)
 	}
 
-	return string(bytes)
+	return bytes
+}
+
+// GoString converts a C string to a Go string
+func GoString(c *byte) string {
+	return string(GoBytes(c))
 }
 
 // ToCString converts a Go string to a C string

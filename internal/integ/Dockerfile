@@ -1,4 +1,4 @@
-FROM golang AS builder
+FROM golang:1.24.2 AS builder
 RUN apt-get update && apt-get install -y curl unzip
 
 WORKDIR /app
@@ -24,9 +24,5 @@ COPY --from=builder /app/libduckdb.so /usr/local/lib
 RUN ldconfig
 
 RUN chmod +x /app/run.sh
-
-RUN ls -l /app
-RUN ls -l /app/out
-RUN ls -l /usr/local/lib
 
 ENTRYPOINT [ "/app/run.sh" ]

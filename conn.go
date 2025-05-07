@@ -85,7 +85,7 @@ func (ps *PreparedStatement) StatementType() (duckdb.DuckDBStatementType, error)
 }
 
 // Query executes a SQL query and returns the result
-func (c *DuckDBConnection) Query(sql string) (*DuckDBResult, error) {
+func (c *DuckDBConnection) Query(sql string) (*duckdb.Result, error) {
 	var rawResult duckdb.DuckDBResultRaw
 	cQuery := duckdb.ToCString(sql)
 	defer duckdb.FreeCString(cQuery)
@@ -97,11 +97,7 @@ func (c *DuckDBConnection) Query(sql string) (*DuckDBResult, error) {
 
 	internalResult := duckdb.NewResult(c.db, rawResult)
 
-	result := &DuckDBResult{
-		internal: internalResult,
-	}
-
-	return result, nil
+	return internalResult, nil
 }
 
 // Execute runs a SQL statement that doesn't return a result
@@ -188,12 +184,12 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 	}
 
 	// Get parameter type information if available
-	paramType := duckdb.DuckDBTypeInvalid
-	if ps.conn.db.ParamType != nil {
+	var logicalType duckdb.DuckDBLogicalType
+	if ps.conn.db.ParamLogicalType != nil {
 		// Parameter indices in DuckDB are 0-based for param_type
 		idx := int64(paramIdx - 1)
 		if idx >= 0 && idx < int64(ps.numParams) {
-			paramType = duckdb.DuckDBType(ps.conn.db.ParamType(ps.handle, int64(paramIdx)))
+			logicalType = ps.conn.db.ParamLogicalType(ps.handle, int64(paramIdx))
 		}
 	}
 
@@ -207,11 +203,11 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 	}
 
 	// Use DuckDB parameter type to guide binding if available
-	if paramType == duckdb.DuckDBTypeInvalid {
+	if logicalType == nil {
 		return ErrDuckDB{Message: "Parameter type is invalid"}
 	}
 
-	err := duckdb.BindParameter(ps.conn.db, ps.handle, paramIdx, value, paramType)
+	err := duckdb.BindParameter(ps.conn.db, ps.handle, paramIdx, value, logicalType)
 	if err != nil {
 		return ErrDuckDB{Message: fmt.Sprintf("Failed to bind parameter: %v", err)}
 	}
@@ -220,7 +216,7 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 }
 
 // Execute executes a prepared statement with bound parameters
-func (ps *PreparedStatement) Execute() (*DuckDBResult, error) {
+func (ps *PreparedStatement) Execute() (*duckdb.Result, error) {
 	if ps.handle == nil {
 		return nil, ErrDuckDB{Message: "Prepared statement is closed"}
 	}
@@ -241,9 +237,6 @@ func (ps *PreparedStatement) Execute() (*DuckDBResult, error) {
 	}
 
 	internalResult := duckdb.NewResult(ps.conn.db, rawResult)
-	result := &DuckDBResult{
-		internal: internalResult,
-	}
 
-	return result, nil
+	return internalResult, nil
 }
