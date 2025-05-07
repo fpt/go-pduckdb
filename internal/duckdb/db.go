@@ -60,7 +60,7 @@ type DB struct {
 	// Additional prepared statement functions
 	ParameterName    func(DuckDBPreparedStatement, int64) *byte
 	ParamType        func(DuckDBPreparedStatement, int64) DuckDBType
-	ParamLogicalType func(DuckDBPreparedStatement, int64) unsafe.Pointer
+	ParamLogicalType func(DuckDBPreparedStatement, int64) DuckDBLogicalType
 	ClearBindings    func(DuckDBPreparedStatement) DuckDBState
 	StatementType    func(DuckDBPreparedStatement) int32
 
@@ -128,13 +128,14 @@ type DB struct {
 	ArrayVectorGetChild          func(DuckDBVector) DuckDBVector
 
 	// Logical Type interface functions
-	CreateLogicalType  func(DuckDBType) DuckDBLogicalType
-	CreateListType     func(DuckDBLogicalType) DuckDBLogicalType
-	DestroyLogicalType func(*DuckDBLogicalType)
-	ListTypeChildType  func(DuckDBLogicalType) DuckDBLogicalType
-	GetTypeID          func(DuckDBLogicalType) DuckDBType
-	DecimalWidth       func(DuckDBLogicalType) uint8
-	DecimalScale       func(DuckDBLogicalType) uint8
+	CreateLogicalType   func(DuckDBType) DuckDBLogicalType
+	LogicalTypeGetAlias func(DuckDBLogicalType) *byte
+	CreateListType      func(DuckDBLogicalType) DuckDBLogicalType
+	ListTypeChildType   func(DuckDBLogicalType) DuckDBLogicalType
+	GetTypeID           func(DuckDBLogicalType) DuckDBType
+	DecimalWidth        func(DuckDBLogicalType) uint8
+	DecimalScale        func(DuckDBLogicalType) uint8
+	DestroyLogicalType  func(*DuckDBLogicalType)
 }
 
 // NewDB creates a new internal database instance
@@ -264,12 +265,13 @@ func NewDB(path string) (*DB, error) {
 
 	// Register Logical Type interface functions
 	purego.RegisterLibFunc(&db.CreateLogicalType, lib, "duckdb_create_logical_type")
+	purego.RegisterLibFunc(&db.LogicalTypeGetAlias, lib, "duckdb_logical_type_get_alias")
 	purego.RegisterLibFunc(&db.CreateListType, lib, "duckdb_create_list_type")
-	purego.RegisterLibFunc(&db.DestroyLogicalType, lib, "duckdb_destroy_logical_type")
 	purego.RegisterLibFunc(&db.ListTypeChildType, lib, "duckdb_list_type_child_type")
 	purego.RegisterLibFunc(&db.GetTypeID, lib, "duckdb_get_type_id")
 	purego.RegisterLibFunc(&db.DecimalWidth, lib, "duckdb_decimal_width")
 	purego.RegisterLibFunc(&db.DecimalScale, lib, "duckdb_decimal_scale")
+	purego.RegisterLibFunc(&db.DestroyLogicalType, lib, "duckdb_destroy_logical_type")
 
 	// Print library version
 	// version := db.LibraryVersion()

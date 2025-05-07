@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"reflect"
+
+	"github.com/fpt/go-pduckdb/internal/duckdb"
 )
 
 // Initialize and register the driver
@@ -247,7 +249,7 @@ func (tx *Tx) Rollback() error {
 
 // Rows implements database/sql/driver.Rows
 type Rows struct {
-	result      *DuckDBResult
+	result      *duckdb.Result
 	columnCnt   int64
 	rowCnt      int64
 	currentRow  int64
@@ -272,32 +274,97 @@ func (r *Rows) Next(dest []driver.Value) error {
 	}
 
 	for i := int64(0); i < int64(r.columnCnt); i++ {
-		// First try date/time types, then fall back to string
+		logicalType := r.result.ColumnLogicalType(i)
+		typeID := r.result.Db.GetTypeID(logicalType)
+		typeAlias := GoString(r.result.Db.LogicalTypeGetAlias(logicalType))
 
-		// Try to get timestamp (most specific first)
-		if val, ok := r.result.ValueTimestamp(i, int32(r.currentRow)); ok {
-			dest[i] = val
-			continue
-		}
-
-		// Try to get date
-		if val, ok := r.result.ValueDate(i, int32(r.currentRow)); ok {
-			dest[i] = val
-			continue
-		}
-
-		// Try to get time
-		if val, ok := r.result.ValueTime(i, int32(r.currentRow)); ok {
-			dest[i] = val
-			continue
-		}
-
-		// Fall back to string for other types
-		if val, ok := r.result.ValueString(i, int32(r.currentRow)); ok {
-			// Check if this could be a JSON value, but keep as string for compatibility
-			// We'll mark it as JSON in ColumnTypes, but provide as string for scanning
-			dest[i] = val
-			continue
+		switch typeID {
+		case duckdb.DuckDBTypeBoolean:
+			if val, ok := r.result.ValueBoolean(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeTinyint:
+			if val, ok := r.result.ValueInt8(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeSmallint:
+			if val, ok := r.result.ValueInt16(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeInteger:
+			if val, ok := r.result.ValueInt32(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeBigint:
+			if val, ok := r.result.ValueInt64(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeUTinyint:
+			if val, ok := r.result.ValueUint8(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeUSmallint:
+			if val, ok := r.result.ValueUint16(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeUInteger:
+			if val, ok := r.result.ValueUint32(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeUBigint:
+			if val, ok := r.result.ValueUint64(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeFloat:
+			if val, ok := r.result.ValueFloat(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeDouble:
+			if val, ok := r.result.ValueDouble(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeDate:
+			if val, ok := r.result.ValueDate(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeTime:
+			if val, ok := r.result.ValueTime(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeTimestamp:
+			if val, ok := r.result.ValueTimestamp(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		case duckdb.DuckDBTypeVarchar:
+			if typeAlias == "JSON" {
+				if val, ok := r.result.ValueVarchar(i, int32(r.currentRow)); ok {
+					dest[i] = val
+					continue
+				}
+			}
+			if val, ok := r.result.ValueString(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
+		default:
+			if val, ok := r.result.ValueString(i, int32(r.currentRow)); ok {
+				dest[i] = val
+				continue
+			}
 		}
 
 		// If all attempts fail, set to nil
@@ -440,7 +507,7 @@ func (s *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 
 // Result implements driver.Result
 type Result struct {
-	result *DuckDBResult
+	result *duckdb.Result
 }
 
 // LastInsertId returns the database's auto-generated ID.

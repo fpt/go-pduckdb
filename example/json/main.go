@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -14,6 +15,15 @@ type Person struct {
 	Name       string         `json:"name"`
 	Age        int            `json:"age"`
 	Attributes map[string]any `json:"attributes"`
+}
+
+// Implement the sql.Scanner interface for Person
+func (p *Person) Scan(src any) error {
+	b, ok := src.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(b, p)
 }
 
 func main() {
@@ -128,14 +138,14 @@ func main() {
 		}
 	}()
 
-	fmt.Printf("%-3s %-12s %-10s %-10s %-10s\n", "ID", "NAME", "AGE", "HEIGHT", "FIRST HOBBY")
+	fmt.Printf("%-3s %-12s %-10s %-10s %-10s %-10s\n", "ID", "NAME", "AGE", "HEIGHT", "FIRST HOBBY", "JSON")
 	fmt.Println("----------------------------------------------------------")
 
 	for rows.Next() {
 		var (
 			id         int
 			name       string
-			data       string
+			data       Person
 			age        string
 			height     string
 			firstHobby string
@@ -145,7 +155,7 @@ func main() {
 			log.Fatalf("Error scanning row: %v", err)
 		}
 
-		fmt.Printf("%-3d %-12s %-10s %-10s %-10s\n", id, name, age, height, firstHobby)
+		fmt.Printf("%-3d %-12s %-10s %-10s %-10s %v\n", id, name, age, height, firstHobby, data)
 	}
 
 	if err := rows.Err(); err != nil {

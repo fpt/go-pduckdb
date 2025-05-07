@@ -38,6 +38,14 @@ func (r *Result) ColumnName(column int64) string {
 	return GoString(ptr)
 }
 
+func (r *Result) ColumnNames() []string {
+	names := make([]string, r.ColumnCount())
+	for i := int64(0); i < r.ColumnCount(); i++ {
+		names[i] = r.ColumnName(i)
+	}
+	return names
+}
+
 // ColumnType returns the type of the column at the given index
 func (r *Result) ColumnType(column int64) DuckDBType {
 	typ := r.Db.ColumnType(&r.Raw, column)
@@ -58,6 +66,15 @@ func (r *Result) ValueString(column int64, row int32) (string, bool) {
 		return "", false // NULL value
 	}
 	return GoString(ptr), true
+}
+
+func (r *Result) ValueVarchar(column int64, row int32) ([]byte, bool) {
+	ptr := r.Db.ValueVarchar(&r.Raw, column, row)
+	if ptr == nil {
+		return nil, false // NULL value
+	}
+
+	return GoBytes(ptr), true
 }
 
 // ValueDate returns the date value at the given column and row
@@ -287,6 +304,34 @@ func (r *Result) ValueNull(column int64, row int32) bool {
 		return r.Db.ValueVarchar(&r.Raw, column, row) == nil
 	}
 	return r.Db.ValueNull(&r.Raw, column, row)
+}
+
+// DecimalInfo returns the precision and scale for decimal types
+func (r *Result) DecimalInfo(column int64) (precision, scale int64, ok bool) {
+	// Get the column type
+	colType := r.ColumnType(column)
+
+	// Check if it's a decimal type
+	if colType != DuckDBTypeDecimal {
+		return 0, 0, false
+	}
+
+	// Get the logical type
+	logicalType := r.ColumnLogicalType(column)
+
+	// If we don't have a logical type, we can't get precision and scale
+	if logicalType == nil {
+		return 0, 0, false
+	}
+
+	// Get precision and scale from the logical type
+	if r.Db.DecimalWidth != nil && r.Db.DecimalScale != nil {
+		precision := int64(r.Db.DecimalWidth(logicalType))
+		scale := int64(r.Db.DecimalScale(logicalType))
+		return precision, scale, true
+	}
+
+	return 0, 0, false
 }
 
 // Close destroys the result and frees associated resources

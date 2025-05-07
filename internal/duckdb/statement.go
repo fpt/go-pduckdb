@@ -21,10 +21,11 @@ func BindParameter(
 	ps DuckDBPreparedStatement,
 	paramIdx int,
 	value any,
-	paramType DuckDBType,
+	logicalType DuckDBLogicalType,
 ) error {
 	var state DuckDBState
 	idx := int32(paramIdx)
+	paramType := db.GetTypeID(logicalType)
 
 	switch paramType {
 	case DuckDBTypeBoolean:
