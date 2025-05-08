@@ -5,18 +5,170 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"unsafe"
 
 	"github.com/fpt/go-pduckdb/internal/convert"
 	"github.com/fpt/go-pduckdb/types"
 )
 
-var ErrBindParameter = fmt.Errorf("failed to bind parameter")
+// PreparedStatement represents a DuckDB prepared statement
+type PreparedStatement struct {
+	handle    DuckDBPreparedStatement
+	conn      *Connection
+	numParams int32
+}
 
-// DuckDBPreparedStatement represents a DuckDB prepared statement
-type DuckDBPreparedStatement unsafe.Pointer
+// ParameterCount returns the number of parameters in the prepared statement
+func (ps *PreparedStatement) ParameterCount() int32 {
+	return ps.numParams
+}
 
-func BindParameter(
+// ParameterName returns the name of the parameter at the given index
+func (ps *PreparedStatement) ParameterName(paramIdx int) (string, error) {
+	if ps.handle == nil {
+		return "", fmt.Errorf("prepared statement is closed")
+	}
+
+	if ps.conn.db.ParameterName == nil {
+		return "", fmt.Errorf("parameter name function not available")
+	}
+
+	// Parameter indices in DuckDB are 0-based for parameter_name
+	idx := int64(paramIdx - 1)
+	namePtr := ps.conn.db.ParameterName(ps.handle, idx)
+	if namePtr == nil {
+		return "", nil // No name for this parameter
+	}
+
+	return GoString(namePtr), nil
+}
+
+// ParameterType returns the DuckDB type of the parameter at the given index
+func (ps *PreparedStatement) ParameterType(paramIdx int) (DuckDBType, error) {
+	if ps.handle == nil {
+		return DuckDBTypeInvalid, fmt.Errorf("prepared statement is closed")
+	}
+
+	if ps.conn.db.ParamType == nil {
+		return DuckDBTypeInvalid, fmt.Errorf("parameter type function not available")
+	}
+
+	// Parameter indices in DuckDB are 0-based for param_type
+	idx := int64(paramIdx - 1)
+	typeCode := ps.conn.db.ParamType(ps.handle, idx)
+	return DuckDBType(typeCode), nil
+}
+
+// ClearBindings removes all parameter bindings from the prepared statement
+func (ps *PreparedStatement) ClearBindings() error {
+	if ps.handle == nil {
+		return fmt.Errorf("prepared statement is closed")
+	}
+
+	if ps.conn.db.ClearBindings == nil {
+		return fmt.Errorf("clear bindings function not available")
+	}
+
+	state := ps.conn.db.ClearBindings(ps.handle)
+	if state != DuckDBSuccess {
+		return fmt.Errorf("failed to clear bindings")
+	}
+
+	return nil
+}
+
+// StatementType returns the type of SQL statement (SELECT, INSERT, etc.)
+func (ps *PreparedStatement) StatementType() (DuckDBStatementType, error) {
+	typeCode := ps.conn.db.StatementType(ps.handle)
+	return DuckDBStatementType(typeCode), nil
+}
+
+// Close releases resources associated with a prepared statement
+func (ps *PreparedStatement) Close() error {
+	if ps.handle == nil {
+		return nil
+	}
+
+	if ps.conn.db.DestroyPrepared == nil {
+		return fmt.Errorf("destroy prepared function not available")
+	}
+
+	// Convert handle to the format DuckDB expects for the destroy function
+	handle := ps.handle
+	ps.conn.db.DestroyPrepared(&handle)
+	ps.handle = nil // Make sure we set the handle to nil after destroying
+	return nil
+}
+
+// BindParameter binds a parameter value to a prepared statement
+func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
+	if ps.handle == nil {
+		return fmt.Errorf("prepared statement is closed")
+	}
+
+	// Ensure basic bind functions are available
+	if ps.conn.db.BindNull == nil {
+		return fmt.Errorf("bind functions not available")
+	}
+
+	// Get parameter type information if available
+	var logicalType DuckDBLogicalType
+	if ps.conn.db.ParamLogicalType != nil {
+		// Parameter indices in DuckDB are 0-based for param_type
+		idx := int64(paramIdx - 1)
+		if idx >= 0 && idx < int64(ps.numParams) {
+			logicalType = ps.conn.db.ParamLogicalType(ps.handle, int64(paramIdx))
+		}
+	}
+
+	// Handle nil value (NULL) regardless of type
+	if value == nil {
+		state := ps.conn.db.BindNull(ps.handle, int32(paramIdx))
+		if state != DuckDBSuccess {
+			return fmt.Errorf("failed to bind NULL parameter")
+		}
+		return nil
+	}
+
+	// Use DuckDB parameter type to guide binding if available
+	if logicalType == nil {
+		return fmt.Errorf("parameter type is invalid")
+	}
+
+	err := bindParameter(ps.conn.db, ps.handle, paramIdx, value, logicalType)
+	if err != nil {
+		return fmt.Errorf("failed to bind parameter: %w", err)
+	}
+
+	return nil
+}
+
+// Execute executes a prepared statement with bound parameters
+func (ps *PreparedStatement) Execute() (*Result, error) {
+	if ps.handle == nil {
+		return nil, fmt.Errorf("prepared statement is closed")
+	}
+
+	if ps.conn.db.ExecutePrepared == nil {
+		return nil, fmt.Errorf("execute prepared function not available")
+	}
+
+	var rawResult DuckDBResultRaw
+	state := ps.conn.db.ExecutePrepared(ps.handle, &rawResult)
+	if state != DuckDBSuccess {
+		// Get error message if possible
+		if ps.conn.db.ResultError != nil {
+			errMsg := GoString(ps.conn.db.ResultError(&rawResult))
+			return nil, fmt.Errorf("failed to execute prepared statement: %s", errMsg)
+		}
+		return nil, fmt.Errorf("failed to execute prepared statement")
+	}
+
+	internalResult := NewResult(ps.conn.db, rawResult)
+
+	return internalResult, nil
+}
+
+func bindParameter(
 	db *DB,
 	ps DuckDBPreparedStatement,
 	paramIdx int,

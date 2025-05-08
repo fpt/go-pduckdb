@@ -2,8 +2,16 @@ package duckdb
 
 import (
 	"time"
-	"unsafe"
 )
+
+// testConnection creates a mock connection for testing
+func testConnection() *Connection {
+	var mockDuckDBConnection DuckDBConnection
+	return &Connection{
+		handle: mockDuckDBConnection,
+		db:     TestDB(),
+	}
+}
 
 // TestDB creates a mock DB for testing
 func TestDB() *DB {
@@ -90,9 +98,9 @@ func MockStringResult(r *Result, values []string) {
 	}
 }
 
-// TestPreparedStatement creates a mock PreparedStatement for testing
-func TestPreparedStatement(db *DB) unsafe.Pointer {
-	// Create a valid underlying value to point to instead of a magic number
-	dummyVal := 12345
-	return unsafe.Pointer(&dummyVal)
-}
+// // TestPreparedStatement creates a mock PreparedStatement for testing
+// func TestPreparedStatement(db *DB) unsafe.Pointer {
+// 	// Create a valid underlying value to point to instead of a magic number
+// 	dummyVal := 12345
+// 	return unsafe.Pointer(&dummyVal)
+// }
