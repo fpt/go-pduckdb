@@ -97,10 +97,3 @@ func MockStringResult(r *Result, values []string) {
 		return nil
 	}
 }
-
-// // TestPreparedStatement creates a mock PreparedStatement for testing
-// func TestPreparedStatement(db *DB) unsafe.Pointer {
-// 	// Create a valid underlying value to point to instead of a magic number
-// 	dummyVal := 12345
-// 	return unsafe.Pointer(&dummyVal)
-// }

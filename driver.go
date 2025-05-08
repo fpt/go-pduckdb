@@ -55,7 +55,6 @@ func (c *Conn) Prepare(query string) (driver.Stmt, error) {
 
 	return &Stmt{
 		conn:         c.conn,
-		query:        query,
 		preparedStmt: preparedStmt,
 	}, nil
 }
@@ -136,13 +135,7 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 			return nil, err
 		}
 		// Dont' close result here, as we need to return it
-		return &Rows{
-			result:      result,
-			columnCnt:   result.ColumnCount(),
-			rowCnt:      result.RowCount(),
-			currentRow:  0,
-			columnNames: result.ColumnNames(),
-		}, nil
+		return newRows(result), nil
 	}
 
 	// Prepare the statement
@@ -202,7 +195,6 @@ func (c *Conn) Begin() (driver.Tx, error) {
 // Stmt implements database/sql/driver.Stmt
 type Stmt struct {
 	conn         *duckdb.Connection
-	query        string
 	preparedStmt *duckdb.PreparedStatement
 }
 
@@ -254,6 +246,16 @@ type Rows struct {
 	rowCnt      int64
 	currentRow  int64
 	columnNames []string
+}
+
+func newRows(result *duckdb.Result) *Rows {
+	return &Rows{
+		result:      result,
+		columnCnt:   result.ColumnCount(),
+		rowCnt:      result.RowCount(),
+		currentRow:  0,
+		columnNames: result.ColumnNames(),
+	}
 }
 
 // Columns returns the names of the columns.
@@ -494,13 +496,7 @@ func (s *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 	}
 
 	// Create and return rows
-	rows := &Rows{
-		result:      result,
-		columnCnt:   result.ColumnCount(),
-		rowCnt:      result.RowCount(),
-		currentRow:  0,
-		columnNames: result.ColumnNames(),
-	}
+	rows := newRows(result)
 
 	return rows, nil
 }

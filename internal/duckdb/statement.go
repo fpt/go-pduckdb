@@ -2,12 +2,10 @@
 package duckdb
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 
 	"github.com/fpt/go-pduckdb/internal/convert"
-	"github.com/fpt/go-pduckdb/types"
 )
 
 // PreparedStatement represents a DuckDB prepared statement
@@ -445,19 +443,8 @@ func bindParameter(
 			return fmt.Errorf("no suitable bind function available for DECIMAL")
 		}
 
-	// For complex types, fall back to JSON representation
 	case DuckDBTypeMap:
-		jsonObj, err := marshalToJSON(value)
-		if err != nil {
-			return fmt.Errorf("failed to marshal JSON: %v", err)
-		}
-		if db.BindVarchar != nil {
-			cStr := ToCString(jsonObj.String())
-			defer FreeCString(cStr)
-			state = db.BindVarchar(ps, idx, cStr)
-		} else {
-			return fmt.Errorf("no suitable bind function available for JSON/complex types")
-		}
+		return fmt.Errorf("map type is not supported")
 
 	case DuckDBTypeList:
 		return fmt.Errorf("list type is not supported")
@@ -474,13 +461,4 @@ func bindParameter(
 	}
 
 	return nil
-}
-
-// marshalToJSON converts any value to a JSON object
-func marshalToJSON(value any) (*types.JSON, error) {
-	jsonBytes, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	return types.NewJSON(string(jsonBytes)), nil
 }
