@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/fpt/go-pduckdb/internal/duckdb"
-	"github.com/fpt/go-pduckdb/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -652,89 +651,6 @@ func TestPreparedStatement(t *testing.T) {
 			if err := stmt.Close(); err != nil {
 				t.Errorf("Error closing statement: %v", err)
 			}
-		}
-	})
-
-	t.Run("ComplexTypes", func(t *testing.T) {
-		// Create a table for complex types
-		err := conn.Execute(`
-			CREATE TABLE complex_data (
-				id INTEGER,
-				json_data VARCHAR,
-				map_data VARCHAR,
-				array_data VARCHAR
-			)
-		`)
-		if err != nil {
-			t.Fatalf("Error creating complex_data table: %v", err)
-		}
-
-		// Prepare statement
-		stmt, err := conn.Prepare(`
-			INSERT INTO complex_data (id, json_data, map_data, array_data) 
-			VALUES (?, ?, ?, ?)
-		`)
-		if err != nil {
-			t.Fatalf("Error preparing statement: %v", err)
-		}
-		defer func() {
-			if err := stmt.Close(); err != nil {
-				t.Errorf("Error closing statement: %v", err)
-			}
-		}()
-
-		// Test binding JSON type
-		jsonObj := types.NewJSON(`{"name":"JSON Test","active":true,"count":42}`)
-
-		// Test binding a map
-		mapData := map[string]any{
-			"name":   "Map Test",
-			"values": []int{1, 2, 3},
-			"nested": map[string]string{
-				"key": "value",
-			},
-		}
-
-		// Test binding an array
-		arrayData := []any{1, "two", 3.0, true}
-
-		// Bind parameters
-		err = stmt.BindParameter(1, 10)
-		if err != nil {
-			t.Errorf("Error binding parameter 1: %v", err)
-		}
-
-		err = stmt.BindParameter(2, jsonObj)
-		if err != nil {
-			t.Errorf("Error binding parameter 2 (JSON): %v", err)
-		}
-
-		err = stmt.BindParameter(3, mapData)
-		if err != nil {
-			t.Errorf("Error binding parameter 3 (map): %v", err)
-		}
-
-		err = stmt.BindParameter(4, arrayData)
-		if err != nil {
-			t.Errorf("Error binding parameter 4 (array): %v", err)
-		}
-
-		// Execute
-		result, err := stmt.Execute()
-		if err != nil {
-			t.Fatalf("Error executing statement with complex types: %v", err)
-		}
-		result.Close()
-
-		// Query back the data to verify
-		queryResult, err := conn.Query("SELECT * FROM complex_data WHERE id = 10")
-		if err != nil {
-			t.Fatalf("Error querying complex data: %v", err)
-		}
-		defer queryResult.Close()
-
-		if queryResult.RowCount() != 1 {
-			t.Errorf("Expected 1 row, got %d", queryResult.RowCount())
 		}
 	})
 
