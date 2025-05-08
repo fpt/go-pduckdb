@@ -296,3 +296,19 @@ func NewDB(path string) (*DB, error) {
 func (db *DB) CloseDB() {
 	db.Close(&db.Handle)
 }
+
+// Connect creates a new connection to the database
+func (d *DB) ConnectDB() (*Connection, error) {
+	var handle DuckDBConnection
+	state := d.Connect(d.Handle, &handle)
+	if state != DuckDBSuccess {
+		return nil, fmt.Errorf("failed to connect to database")
+	}
+
+	conn := &Connection{
+		handle: handle,
+		db:     d,
+	}
+
+	return conn, nil
+}

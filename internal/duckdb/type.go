@@ -341,6 +341,9 @@ type DuckDBValue unsafe.Pointer
 // DuckDBConnection represents a DuckDB connection
 type DuckDBConnection unsafe.Pointer
 
+// DuckDBPreparedStatement represents a DuckDB prepared statement
+type DuckDBPreparedStatement unsafe.Pointer
+
 // DuckDBDatabase represents a DuckDB database
 type DuckDBDatabase unsafe.Pointer
 

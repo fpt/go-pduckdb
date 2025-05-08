@@ -42,7 +42,7 @@ func (d *Driver) Open(dsn string) (driver.Conn, error) {
 // Conn implements database/sql/driver.Conn
 type Conn struct {
 	db   *DuckDB
-	conn *DuckDBConnection
+	conn *duckdb.Connection
 }
 
 // Prepare returns a prepared statement, bound to this connection.
@@ -201,9 +201,9 @@ func (c *Conn) Begin() (driver.Tx, error) {
 
 // Stmt implements database/sql/driver.Stmt
 type Stmt struct {
-	conn         *DuckDBConnection
+	conn         *duckdb.Connection
 	query        string
-	preparedStmt *PreparedStatement
+	preparedStmt *duckdb.PreparedStatement
 }
 
 // Close closes the statement.
@@ -217,7 +217,7 @@ func (s *Stmt) Close() error {
 // NumInput returns the number of placeholder parameters.
 func (s *Stmt) NumInput() int {
 	if s.preparedStmt != nil {
-		return int(s.preparedStmt.numParams)
+		return int(s.preparedStmt.ParameterCount())
 	}
 	return -1 // Driver doesn't know how many parameters there are
 }
@@ -234,7 +234,7 @@ func (s *Stmt) Query(args []driver.Value) (driver.Rows, error) {
 
 // Tx implements database/sql/driver.Tx
 type Tx struct {
-	conn *DuckDBConnection
+	conn *duckdb.Connection
 }
 
 // Commit commits the transaction.
@@ -276,7 +276,7 @@ func (r *Rows) Next(dest []driver.Value) error {
 	for i := int64(0); i < int64(r.columnCnt); i++ {
 		logicalType := r.result.ColumnLogicalType(i)
 		typeID := r.result.Db.GetTypeID(logicalType)
-		typeAlias := GoString(r.result.Db.LogicalTypeGetAlias(logicalType))
+		typeAlias := goString(r.result.Db.LogicalTypeGetAlias(logicalType))
 
 		switch typeID {
 		case duckdb.DuckDBTypeBoolean:

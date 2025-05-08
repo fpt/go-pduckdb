@@ -6,6 +6,13 @@ import (
 	"github.com/fpt/go-pduckdb/internal/duckdb"
 )
 
+// testDuckDB creates a mock DuckDB instance for testing
+func testDuckDB() *DuckDB {
+	return &DuckDB{
+		db: duckdb.TestDB(),
+	}
+}
+
 func TestNewDuckDB(t *testing.T) {
 	// Test successful database creation
 	// (We can't easily mock the internal NewDB function, so we'll test the public API)
@@ -77,7 +84,7 @@ func TestDuckDBClose(t *testing.T) {
 
 func TestGoString(t *testing.T) {
 	// Test empty string
-	emptyStr := GoString(nil)
+	emptyStr := goString(nil)
 	if emptyStr != "" {
 		t.Errorf("Expected empty string for nil, got %q", emptyStr)
 	}

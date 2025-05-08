@@ -23,16 +23,10 @@ func NewDuckDB(path string) (*DuckDB, error) {
 }
 
 // Connect creates a new connection to the database
-func (d *DuckDB) Connect() (*DuckDBConnection, error) {
-	var handle duckdb.DuckDBConnection
-	state := d.db.Connect(d.db.Handle, &handle)
-	if state != duckdb.DuckDBSuccess {
+func (d *DuckDB) Connect() (*duckdb.Connection, error) {
+	conn, err := d.db.ConnectDB()
+	if err != nil {
 		return nil, ErrDuckDB{Message: "Failed to connect to database"}
-	}
-
-	conn := &DuckDBConnection{
-		handle: handle,
-		db:     d.db,
 	}
 
 	return conn, nil
@@ -43,8 +37,8 @@ func (d *DuckDB) Close() {
 	d.db.CloseDB()
 }
 
-// GoString converts a C string to a Go string
+// goString converts a C string to a Go string
 // This is kept for backward compatibility
-func GoString(c *byte) string {
+func goString(c *byte) string {
 	return duckdb.GoString(c)
 }
