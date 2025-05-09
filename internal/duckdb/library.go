@@ -1,4 +1,7 @@
 // Package duckdb provides internal implementation details for the go-pduckdb driver.
+
+//go:build darwin || freebsd || linux || netbsd || windows
+
 package duckdb
 
 import (
@@ -7,15 +10,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"unsafe"
-
-	"github.com/ebitengine/purego"
 )
 
 // LoadDuckDBLibrary attempts to load the DuckDB library from various locations based on the platform
 func LoadDuckDBLibrary() (uintptr, error) {
 	// First check if the library path is specified via environment variable
 	if envPath := os.Getenv("DUCKDB_LIBRARY_PATH"); envPath != "" {
-		lib, err := purego.Dlopen(envPath, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		lib, err := openLibrary(envPath)
 		if err == nil {
 			return lib, nil
 		}
@@ -30,7 +31,7 @@ func LoadDuckDBLibrary() (uintptr, error) {
 	// Try each location
 	var lastErr error
 	for _, location := range locations {
-		lib, err := purego.Dlopen(location, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		lib, err := openLibrary(location)
 		if err == nil {
 			return lib, nil
 		}
@@ -50,12 +51,17 @@ func getLibraryPaths() []string {
 	case "linux":
 		locations = getLinuxLibraryPaths()
 	case "windows":
-		// Windows standard locations
-		locations = []string{
-			"duckdb.dll", // Current directory
+		// Windows standard locations - prioritize current directory as it's the most likely location
+		currentDir, err := os.Getwd()
+		if err == nil {
+			locations = append(locations, filepath.Join(currentDir, "duckdb.dll"))
+		}
+		// Then add other standard locations
+		locations = append(locations,
+			"duckdb.dll", // Current directory (relative path)
 			filepath.Join(os.Getenv("ProgramFiles"), "DuckDB", "duckdb.dll"),
 			filepath.Join(os.Getenv("ProgramFiles(x86)"), "DuckDB", "duckdb.dll"),
-		}
+		)
 	}
 
 	return locations
