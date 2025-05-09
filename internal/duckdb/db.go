@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/ebitengine/purego"
+	"github.com/pkg/errors"
 )
 
 //! DuckDB's index type.
@@ -102,6 +103,7 @@ type DB struct {
 
 	// Data Chunk interface functions
 	FetchChunk              func(*DuckDBResultRaw) DuckDBDataChunk
+	ResultReturnType        func(*DuckDBResultRaw) DuckDBResultType
 	ResultGetChunk          func(*DuckDBResultRaw, int64) DuckDBDataChunk
 	ResultChunkCount        func(*DuckDBResultRaw) int64
 	ResultIsStreaming       func(*DuckDBResultRaw) bool
@@ -145,7 +147,7 @@ func NewDB(path string) (*DB, error) {
 	// Load DuckDB library
 	lib, err := LoadDuckDBLibrary()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load DuckDB library: %w", err)
+		return nil, errors.Wrapf(err, "failed to load DuckDB library")
 	}
 	db.Lib = lib
 
@@ -238,6 +240,7 @@ func NewDB(path string) (*DB, error) {
 
 	// Register Data Chunk interface functions
 	purego.RegisterLibFunc(&db.FetchChunk, lib, "duckdb_fetch_chunk")
+	purego.RegisterLibFunc(&db.ResultReturnType, lib, "duckdb_result_return_type")
 	purego.RegisterLibFunc(&db.ResultGetChunk, lib, "duckdb_result_get_chunk")
 	purego.RegisterLibFunc(&db.ResultChunkCount, lib, "duckdb_result_chunk_count")
 	purego.RegisterLibFunc(&db.ResultIsStreaming, lib, "duckdb_result_is_streaming")
