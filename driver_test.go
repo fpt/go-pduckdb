@@ -719,9 +719,9 @@ func TestPreparedStatement(t *testing.T) {
 		}
 		defer queryResult.Close()
 
-		countStr, _ := queryResult.ValueString(0, 0)
-		if countStr != "2" {
-			t.Errorf("Expected count 2, got %s", countStr)
+		count, _ := queryResult.ValueInt32(0, 0)
+		if count != 2 {
+			t.Errorf("Expected count 2, got %d", count)
 		}
 	})
 
@@ -807,6 +807,62 @@ func TestPreparedStatement(t *testing.T) {
 		err = stmt.BindParameter(999, 42)
 		if err == nil {
 			t.Errorf("Expected error for out-of-bounds parameter index, got none")
+		}
+	})
+}
+
+func TestUpdateStatement(t *testing.T) {
+	// Open a database connection
+	db, err := NewDuckDB(":memory:")
+	if err != nil {
+		t.Fatalf("Error opening database: %v", err)
+	}
+	defer db.Close()
+
+	// Create a connection
+	conn, err := db.Connect()
+	if err != nil {
+		t.Fatalf("Error connecting to database: %v", err)
+	}
+
+	// Create a table for testing prepared statements
+	err = conn.Execute(`
+		CREATE TABLE users (
+			id INTEGER,
+			name VARCHAR,
+			email VARCHAR
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Error creating table: %v", err)
+	}
+
+	t.Run("RowsChanged", func(t *testing.T) {
+		// Prepare a statement with parameters
+		err := conn.Execute(`
+			INSERT INTO users (id, name, email) VALUES (1, 'User 1', 'user1@example.com'), (2, 'User 2', 'user2@example.com')
+		`)
+		if err != nil {
+			t.Fatalf("Error executing statement: %v", err)
+		}
+
+		result, err := conn.Query("UPDATE users SET name = 'Updated User 1' WHERE id = 1")
+		if err != nil {
+			t.Fatalf("Error executing update statement: %v", err)
+		}
+
+		rowsChanged := result.RowsChanged()
+		if rowsChanged != 1 {
+			t.Errorf("Expected 1 affected row, got %d", rowsChanged)
+		}
+
+		result, err = conn.Query("DELETE FROM users")
+		if err != nil {
+			t.Fatalf("Error executing delete statement: %v", err)
+		}
+		rowsChanged = result.RowsChanged()
+		if rowsChanged != 2 {
+			t.Errorf("Expected 2 affected rows, got %d", rowsChanged)
 		}
 	})
 }

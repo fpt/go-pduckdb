@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"io"
 	"reflect"
+
+	"github.com/pkg/errors"
 
 	"github.com/fpt/go-pduckdb/internal/duckdb"
 )
@@ -513,7 +514,7 @@ func (r *Result) LastInsertId() (int64, error) {
 
 // RowsAffected returns the number of rows affected.
 func (r *Result) RowsAffected() (int64, error) {
-	return 0, errors.New("RowsAffected is not supported in this implementation")
+	return r.result.RowsChanged(), nil
 }
 
 // Ensure our driver implements necessary interfaces

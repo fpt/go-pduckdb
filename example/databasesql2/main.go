@@ -58,4 +58,17 @@ func main() {
 		}
 		fmt.Printf("User %d: %s (%s)\n", id, name, email)
 	}
+
+	// Update data
+	result, err := db.Exec(`UPDATE users SET email = 'johndoe@example.com' WHERE id = 1`)
+	if err != nil {
+		log.Fatalf("Error updating data: %v", err)
+	}
+
+	// Verify RowsAffected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Fatalf("Error getting rows affected: %v", err)
+	}
+	fmt.Printf("Rows affected by update: %d\n", rowsAffected)
 }

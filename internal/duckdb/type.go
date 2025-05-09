@@ -453,3 +453,12 @@ type DuckDBDataChunk unsafe.Pointer
 
 // DuckDBVector represents a DuckDB vector
 type DuckDBVector unsafe.Pointer
+
+type DuckDBResultType int32
+
+const (
+	DuckDBResultTypeInvalid     DuckDBResultType = 0
+	DuckDBResultTypeChangedRows DuckDBResultType = 1
+	DuckDBResultTypeNothing     DuckDBResultType = 2
+	DuckDBResultTypeQueryResult DuckDBResultType = 3
+)

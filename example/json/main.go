@@ -3,9 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
+
+	"github.com/pkg/errors"
 
 	_ "github.com/fpt/go-pduckdb" // Import for driver registration
 )

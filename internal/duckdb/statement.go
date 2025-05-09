@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/fpt/go-pduckdb/internal/convert"
+	"github.com/pkg/errors"
 )
 
 // PreparedStatement represents a DuckDB prepared statement
@@ -161,7 +162,7 @@ func (ps *PreparedStatement) Execute() (*Result, error) {
 		return nil, fmt.Errorf("failed to execute prepared statement")
 	}
 
-	internalResult := NewResult(ps.conn.db, rawResult)
+	internalResult := newResult(ps.conn.db, rawResult)
 
 	return internalResult, nil
 }
@@ -182,7 +183,7 @@ func bindParameter(
 		// Convert to boolean
 		boolVal, err := convert.ToBoolean(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to BOOLEAN: %v", err)
+			return errors.Wrapf(err, "failed to convert value to BOOLEAN")
 		}
 		if db.BindBoolean != nil {
 			state = db.BindBoolean(ps, idx, boolVal)
@@ -206,7 +207,7 @@ func bindParameter(
 		// Convert to int8
 		intVal, err := convert.ToInt8(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to TINYINT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to TINYINT")
 		}
 		if db.BindInt8 != nil {
 			state = db.BindInt8(ps, idx, intVal)
@@ -222,7 +223,7 @@ func bindParameter(
 		// Convert to int16
 		intVal, err := convert.ToInt16(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to SMALLINT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to SMALLINT")
 		}
 		if db.BindInt16 != nil {
 			state = db.BindInt16(ps, idx, intVal)
@@ -238,7 +239,7 @@ func bindParameter(
 		// Convert to int32
 		intVal, err := convert.ToInt32(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to INTEGER: %v", err)
+			return errors.Wrapf(err, "failed to convert value to INTEGER")
 		}
 		if db.BindInt32 != nil {
 			state = db.BindInt32(ps, idx, intVal)
@@ -252,7 +253,7 @@ func bindParameter(
 		// Convert to int64
 		intVal, err := convert.ToInt64(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to BIGINT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to BIGINT")
 		}
 		if db.BindInt64 != nil {
 			state = db.BindInt64(ps, idx, intVal)
@@ -264,7 +265,7 @@ func bindParameter(
 		// Convert to uint8
 		uintVal, err := convert.ToUint8(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to UTINYINT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to UTINYINT")
 		}
 		if db.BindUint8 != nil {
 			state = db.BindUint8(ps, idx, uintVal)
@@ -280,7 +281,7 @@ func bindParameter(
 		// Convert to uint16
 		uintVal, err := convert.ToUint16(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to USMALLINT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to USMALLINT")
 		}
 		if db.BindUint16 != nil {
 			state = db.BindUint16(ps, idx, uintVal)
@@ -296,7 +297,7 @@ func bindParameter(
 		// Convert to uint32
 		uintVal, err := convert.ToUint32(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to UINTEGER: %v", err)
+			return errors.Wrapf(err, "failed to convert value to UINTEGER")
 		}
 		if db.BindUint32 != nil {
 			state = db.BindUint32(ps, idx, uintVal)
@@ -310,7 +311,7 @@ func bindParameter(
 		// Convert to uint64
 		uintVal, err := convert.ToUint64(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to UBIGINT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to UBIGINT")
 		}
 		if db.BindUint64 != nil {
 			state = db.BindUint64(ps, idx, uintVal)
@@ -324,7 +325,7 @@ func bindParameter(
 		// Convert to float32
 		floatVal, err := convert.ToFloat32(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to FLOAT: %v", err)
+			return errors.Wrapf(err, "failed to convert value to FLOAT")
 		}
 		if db.BindFloat != nil {
 			state = db.BindFloat(ps, idx, floatVal)
@@ -338,7 +339,7 @@ func bindParameter(
 		// Convert to float64
 		doubleVal, err := convert.ToFloat64(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to DOUBLE: %v", err)
+			return errors.Wrapf(err, "failed to convert value to DOUBLE")
 		}
 		if db.BindDouble != nil {
 			state = db.BindDouble(ps, idx, doubleVal)
@@ -350,7 +351,7 @@ func bindParameter(
 		// Convert to string
 		strVal, err := convert.ToString(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to VARCHAR: %v", err)
+			return errors.Wrapf(err, "failed to convert value to VARCHAR")
 		}
 		if db.BindVarchar != nil {
 			cStr := ToCString(strVal)
@@ -368,7 +369,7 @@ func bindParameter(
 		// Convert to Date
 		dateVal, err := convert.ToDate(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to DATE: %v", err)
+			return errors.Wrapf(err, "failed to convert value to DATE")
 		}
 		if db.BindDate != nil {
 			state = db.BindDate(ps, idx, int32(dateVal.Days))
@@ -385,7 +386,7 @@ func bindParameter(
 		// Convert to Time
 		timeVal, err := convert.ToTime(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to TIME: %v", err)
+			return errors.Wrapf(err, "failed to convert value to TIME")
 		}
 		if db.BindTime != nil {
 			state = db.BindTime(ps, idx, timeVal.Micros)
@@ -402,7 +403,7 @@ func bindParameter(
 		// Convert to timestamp (time.Time)
 		timestampVal, err := convert.ToTimestamp(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to TIMESTAMP: %v", err)
+			return errors.Wrapf(err, "failed to convert value to TIMESTAMP")
 		}
 		if db.BindTimestamp != nil {
 			// Convert to DuckDB timestamp (microseconds since epoch)
@@ -427,7 +428,7 @@ func bindParameter(
 		// Convert to double - DuckDB uses double internally for DECIMAL
 		doubleVal, err := convert.ToFloat64(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert value to DECIMAL: %v", err)
+			return errors.Wrapf(err, "failed to convert value to DECIMAL")
 		}
 
 		if db.BindDouble != nil {

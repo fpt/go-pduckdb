@@ -30,39 +30,25 @@ func main() {
 	fmt.Println("Connected to DuckDB successfully!")
 
 	// Create a table using standard database/sql
-	stmt, err := db.Prepare(`CREATE TABLE IF NOT EXISTS users (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY, 
 		name VARCHAR, 
 		email VARCHAR, 
 		created_at TIMESTAMP
 	)`)
 	if err != nil {
-		log.Fatalf("Error preparing create table statement: %v", err)
-	}
-	_, err = stmt.Exec()
-	if err != nil {
 		log.Fatalf("Error creating table: %v", err)
-	}
-	if err := stmt.Close(); err != nil {
-		log.Printf("Error closing statement: %v", err)
 	}
 	fmt.Println("Table created successfully")
 
 	// Delete any existing data to avoid duplicate key errors
-	stmt, err = db.Prepare("DELETE FROM users")
+	_, err = db.Exec("DELETE FROM users")
 	if err != nil {
 		log.Fatalf("Error preparing delete statement: %v", err)
 	}
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Fatalf("Error deleting existing data: %v", err)
-	}
-	if err := stmt.Close(); err != nil {
-		log.Printf("Error closing statement: %v", err)
-	}
 
 	// Insert data one row at a time to work around driver limitations
-	stmt, err = db.Prepare("INSERT INTO users (id, name, email, created_at) VALUES (?, ?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO users (id, name, email, created_at) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		log.Fatalf("Error preparing insert statement: %v", err)
 	}
