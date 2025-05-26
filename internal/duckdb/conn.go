@@ -21,7 +21,7 @@ func (c *Connection) Query(sql string) (*Result, error) {
 		return nil, fmt.Errorf("Query failed: %s", sql)
 	}
 
-	internalResult := NewResult(c.db, rawResult)
+	internalResult := newResult(c.db, rawResult)
 
 	return internalResult, nil
 }

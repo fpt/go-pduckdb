@@ -10,8 +10,8 @@ type Result struct {
 	Db  *DB
 }
 
-// NewResult creates a new Result from a database and raw result
-func NewResult(db *DB, raw DuckDBResultRaw) *Result {
+// newResult creates a new Result from a database and raw result
+func newResult(db *DB, raw DuckDBResultRaw) *Result {
 	return &Result{
 		Raw: raw,
 		Db:  db,
@@ -29,7 +29,10 @@ func (r *Result) RowCount() int64 {
 }
 
 func (r *Result) RowsChanged() int64 {
-	return r.Db.RowsChanged(&r.Raw)
+	if r.Db.RowsChanged != nil {
+		return r.Db.RowsChanged(&r.Raw)
+	}
+	return 0
 }
 
 // ColumnName returns the name of the column at the given index
