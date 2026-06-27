@@ -13,24 +13,22 @@ import (
 
 // LoadDuckDBLibrary attempts to load the DuckDB library from various locations based on the platform
 func LoadDuckDBLibrary() (uintptr, error) {
-	// First check if the library path is specified via environment variable
+	// Check environment variable first
 	if envPath := os.Getenv("DUCKDB_LIBRARY_PATH"); envPath != "" {
-		lib, err := purego.Dlopen(envPath, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		lib, err := loadLibrary(envPath)
 		if err == nil {
 			return lib, nil
 		}
-		// If the explicitly provided path fails, return that error directly
-		// as the user would expect the specified library to work
+
 		return 0, fmt.Errorf("failed to load DuckDB library from DUCKDB_LIBRARY_PATH (%s): %w", envPath, err)
 	}
 
-	// Get platform-specific library paths
+	// Try common locations
 	locations := getLibraryPaths()
 
-	// Try each location
 	var lastErr error
-	for _, location := range locations {
-		lib, err := purego.Dlopen(location, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	for _, loc := range locations {
+		lib, err := loadLibrary(loc)
 		if err == nil {
 			return lib, nil
 		}
