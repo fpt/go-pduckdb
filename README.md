@@ -34,7 +34,7 @@ Typically, `/opt/homebrew/lib/libduckdb.dylib` is installed.
 
 ### Linux (Ubuntu/Debian)
 ```bash
-curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.2.2/libduckdb-linux-amd64.zip -o archive.zip
+curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.5.4/libduckdb-linux-amd64.zip -o archive.zip
 sudo unzip -j archive.zip libduckdb.so -d /usr/local/lib
 sudo ldconfig
 rm archive.zip
@@ -205,19 +205,32 @@ if hasValue {
 }
 ```
 
-## Limitations
+## Type support
+
+Result values are read through DuckDB's data-chunk / vector API — the modern,
+non-deprecated path — rather than the deprecated `duckdb_value_*` accessors.
+This covers:
+
+- All scalar types, including **BLOB** and **INTERVAL** (previously blocked by
+  purego's struct-return limits), plus DECIMAL, UUID, HUGEINT and ENUM.
+- The nested types **LIST**, **ARRAY**, **STRUCT** and **MAP**, decoded to
+  `[]any`, `map[string]any` and `[]duckdb.MapEntry` respectively (recursively,
+  so lists of structs etc. work).
 
 ### Unsupported types (yet)
 
-- List
-- Struct
+These currently scan as `NULL`:
 
-### Unsupported types due to purego limitation
+- UNION
+- BIT / VARINT
+- TIME WITH TIME ZONE
 
-These types use struct return value which is not supported by purego in some platform.
+### Requirements
 
-- Blob
-- Interval
+- **purego v0.10.0 or newer.** v0.10.0 added struct-by-value argument support on
+  Linux; the driver needs it to call `duckdb_fetch_chunk` (which takes the
+  `duckdb_result` struct by value) on non-macOS platforms. Earlier purego
+  releases only allowed struct arguments on darwin.
 
 ## Project Structure
 
@@ -225,29 +238,29 @@ This project follows the [standard Go project layout](https://go.dev/doc/modules
 
 ```
 go-pduckdb/
-├── conn.go          # Connection handling
 ├── driver.go        # database/sql driver implementation
 ├── error.go         # Error handling
-├── extensions.go    # DuckDB extensions support
-├── pduckdb.go       # Core functionality
-├── result.go        # Result processing
-├── *_test.go        # Unit tests
-├── example/         # Example code
+├── pduckdb.go       # Core public API (DuckDB, Connect, Close)
+├── *_test.go        # Unit + integration tests
+├── example/         # Example programs
 │   ├── columntypes/     # Column type demonstration
 │   ├── databasesql/     # database/sql usage examples
 │   ├── databasesql2/    # Additional database/sql examples
 │   ├── enhancedtypes/   # Enhanced type support examples
 │   ├── json/            # JSON handling examples
+│   ├── multistatement/  # Multi-statement examples
 │   └── simple/          # Simple API usage examples
-├── internal/        # Internal implementation
-│   ├── convert/         # Type conversion utilities
-│   ├── duckdb/          # Low-level DuckDB bindings
-│   └── integ/           # Integration test infrastructure
-└── types/           # Custom type definitions
-    ├── datetime.go      # Date/time type implementations
-    ├── json.go          # JSON support
-    ├── slice.go         # Slice handling
-    └── sql.go           # SQL specific types
+└── internal/        # Internal implementation
+    ├── convert/         # Parameter type-conversion utilities
+    ├── duckdb/          # Low-level DuckDB bindings
+    │   ├── library.go       # Library loading (purego Dlopen)
+    │   ├── db.go            # C function registration
+    │   ├── conn.go          # Connection handling
+    │   ├── statement.go     # Prepared statements + parameter binding
+    │   ├── result.go        # Result reading (data-chunk cache)
+    │   ├── chunk.go         # Data-chunk / vector decoding
+    │   └── type.go          # DuckDB type definitions
+    └── integ/           # Integration test infrastructure
 ```
 
 ## Contributing

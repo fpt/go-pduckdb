@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-
-	"golang.org/x/exp/constraints"
 )
 
 // ToInt8 converts a value to an int8
@@ -49,7 +47,7 @@ func ToUint64(value any) (uint64, error) {
 }
 
 // ToIntX is a generic function to convert a value to an integer type
-func ToIntX[T constraints.Integer](value any, minValue, maxValue T) (T, error) {
+func ToIntX[T integer](value any, minValue, maxValue T) (T, error) {
 	switch v := value.(type) {
 	case int8:
 		if int64(v) < int64(minValue) || int64(v) > int64(maxValue) {

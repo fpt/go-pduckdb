@@ -335,6 +335,21 @@ func (t DuckDBType) String() string {
 	}
 }
 
+// Interval mirrors duckdb_interval: a calendar interval of months, days and
+// microseconds. DuckDB keeps the three components separate because a month and
+// a day are not fixed numbers of microseconds.
+type Interval struct {
+	Months int32
+	Days   int32
+	Micros int64
+}
+
+// Hugeint mirrors duckdb_hugeint, DuckDB's 128-bit integer (lower/upper words).
+type Hugeint struct {
+	Lower uint64
+	Upper int64
+}
+
 // DuckDBValue represents a DuckDB value
 type DuckDBValue unsafe.Pointer
 

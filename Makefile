@@ -23,7 +23,7 @@ integ: ## Run integration tests
 	docker run --rm go-pduckdb/integ
 
 integ-arm64: ## Run integration tests on arm64
-	docker build --platform linux/arm64 --build-arg GOARCH=arm64 --build-arg LIBARCH=aarch64 -t go-pduckdb/integ-arm64 -f internal/integ/Dockerfile . && \
+	docker build --platform linux/arm64 --build-arg GOARCH=arm64 --build-arg LIBARCH=arm64 -t go-pduckdb/integ-arm64 -f internal/integ/Dockerfile . && \
 	docker run --rm go-pduckdb/integ-arm64
 
 help: ## Display this help

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-
-	"golang.org/x/exp/constraints"
 )
 
 // ToFloat32 converts a value to a float32
@@ -19,7 +17,7 @@ func ToFloat64(value any) (float64, error) {
 }
 
 // ToFloatX is a generic function to convert a value to a floating-point type
-func ToFloatX[T constraints.Float](value any, minValue, maxValue T) (T, error) {
+func ToFloatX[T float](value any, minValue, maxValue T) (T, error) {
 	switch v := value.(type) {
 	case int8:
 		return T(v), nil

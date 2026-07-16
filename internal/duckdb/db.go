@@ -27,30 +27,8 @@ type DB struct {
 	ColumnType        func(*DuckDBResultRaw, int64) DuckDBType
 	ColumnLogicalType func(*DuckDBResultRaw, int64) DuckDBLogicalType
 	ColumnCount       func(*DuckDBResultRaw) int64
-	RowCount          func(*DuckDBResultRaw) int64
 	RowsChanged       func(*DuckDBResultRaw) int64
-	ValueString       func(*DuckDBResultRaw, int64, int32) *byte
-	ValueDate         func(*DuckDBResultRaw, int64, int32) int32
-	ValueTime         func(*DuckDBResultRaw, int64, int32) int64
-	ValueTimestamp    func(*DuckDBResultRaw, int64, int32) int64
-	// Additional value functions
-	ValueBoolean         func(*DuckDBResultRaw, int64, int32) bool
-	ValueInt8            func(*DuckDBResultRaw, int64, int32) int8
-	ValueInt16           func(*DuckDBResultRaw, int64, int32) int16
-	ValueInt32           func(*DuckDBResultRaw, int64, int32) int32
-	ValueInt64           func(*DuckDBResultRaw, int64, int32) int64
-	ValueUint8           func(*DuckDBResultRaw, int64, int32) uint8
-	ValueUint16          func(*DuckDBResultRaw, int64, int32) uint16
-	ValueUint32          func(*DuckDBResultRaw, int64, int32) uint32
-	ValueUint64          func(*DuckDBResultRaw, int64, int32) uint64
-	ValueFloat           func(*DuckDBResultRaw, int64, int32) float32
-	ValueDouble          func(*DuckDBResultRaw, int64, int32) float64
-	ValueVarchar         func(*DuckDBResultRaw, int64, int32) *byte
-	ValueVarcharInternal func(*DuckDBResultRaw, int64, int32) *byte
-	ValueNull            func(*DuckDBResultRaw, int64, int32) bool
-	ValueListSize        func(*DuckDBResultRaw, int64, int32) int32
-	ValueListChild       func(*DuckDBResultRaw, int64, int32) DuckDBValue
-	DestroyResult        func(*DuckDBResultRaw)
+	DestroyResult     func(*DuckDBResultRaw)
 
 	// Prepared statement functions
 	Prepare         func(DuckDBConnection, *byte, *DuckDBPreparedStatement) DuckDBState
@@ -88,6 +66,10 @@ type DB struct {
 	// Error handling
 	ResultError func(*DuckDBResultRaw) *byte
 
+	// Free releases memory returned by the C API (duckdb_free), e.g. the char*
+	// from duckdb_logical_type_get_alias and duckdb_enum_dictionary_value.
+	Free func(unsafe.Pointer)
+
 	// Value interface functions
 	DestroyValue    func(*DuckDBValue)
 	CreateVarchar   func(string) DuckDBValue
@@ -101,12 +83,11 @@ type DB struct {
 	IsNullValue     func(DuckDBValue) bool
 	CreateNullValue func() DuckDBValue
 
-	// Data Chunk interface functions
-	FetchChunk              func(*DuckDBResultRaw) DuckDBDataChunk
-	ResultReturnType        func(*DuckDBResultRaw) DuckDBResultType
-	ResultGetChunk          func(*DuckDBResultRaw, int64) DuckDBDataChunk
-	ResultChunkCount        func(*DuckDBResultRaw) int64
-	ResultIsStreaming       func(*DuckDBResultRaw) bool
+	// Data Chunk interface functions.
+	// NOTE: duckdb_fetch_chunk and duckdb_result_return_type take duckdb_result BY VALUE.
+	// This requires purego >= v0.10.0 on Linux (struct arguments were darwin-only before).
+	FetchChunk              func(DuckDBResultRaw) DuckDBDataChunk
+	ResultReturnType        func(DuckDBResultRaw) DuckDBResultType
 	CreateDataChunk         func(*DuckDBLogicalType, int64) DuckDBDataChunk
 	DestroyDataChunk        func(*DuckDBDataChunk)
 	DataChunkReset          func(DuckDBDataChunk)
@@ -137,7 +118,16 @@ type DB struct {
 	GetTypeID           func(DuckDBLogicalType) DuckDBType
 	DecimalWidth        func(DuckDBLogicalType) uint8
 	DecimalScale        func(DuckDBLogicalType) uint8
-	DestroyLogicalType  func(*DuckDBLogicalType)
+	DecimalInternalType func(DuckDBLogicalType) DuckDBType
+	EnumInternalType    func(DuckDBLogicalType) DuckDBType
+	EnumDictionarySize  func(DuckDBLogicalType) uint32
+	EnumDictionaryValue func(DuckDBLogicalType, int64) *byte
+	// Nested-type metadata (child logical types are read from child vectors via
+	// VectorGetLogicalColumnType, so only names/counts/sizes are needed here).
+	StructTypeChildCount func(DuckDBLogicalType) int64
+	StructTypeChildName  func(DuckDBLogicalType, int64) *byte
+	ArrayTypeArraySize   func(DuckDBLogicalType) int64
+	DestroyLogicalType   func(*DuckDBLogicalType)
 }
 
 // NewDB creates a new internal database instance
@@ -163,31 +153,11 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&db.ColumnType, lib, "duckdb_column_type")
 	purego.RegisterLibFunc(&db.ColumnLogicalType, lib, "duckdb_column_logical_type")
 	purego.RegisterLibFunc(&db.ColumnCount, lib, "duckdb_column_count")
-	purego.RegisterLibFunc(&db.RowCount, lib, "duckdb_row_count") // WARN: future deprecation
 	purego.RegisterLibFunc(&db.RowsChanged, lib, "duckdb_rows_changed")
 
-	// Register additional value functions
-	purego.RegisterLibFunc(&db.ValueBoolean, lib, "duckdb_value_boolean")
-	purego.RegisterLibFunc(&db.ValueInt8, lib, "duckdb_value_int8")
-	purego.RegisterLibFunc(&db.ValueInt16, lib, "duckdb_value_int16")
-	purego.RegisterLibFunc(&db.ValueInt32, lib, "duckdb_value_int32")
-	purego.RegisterLibFunc(&db.ValueInt64, lib, "duckdb_value_int64")
-	purego.RegisterLibFunc(&db.ValueUint8, lib, "duckdb_value_uint8")
-	purego.RegisterLibFunc(&db.ValueUint16, lib, "duckdb_value_uint16")
-	purego.RegisterLibFunc(&db.ValueUint32, lib, "duckdb_value_uint32")
-	purego.RegisterLibFunc(&db.ValueUint64, lib, "duckdb_value_uint64")
-	purego.RegisterLibFunc(&db.ValueFloat, lib, "duckdb_value_float")
-	purego.RegisterLibFunc(&db.ValueDouble, lib, "duckdb_value_double")
-	purego.RegisterLibFunc(&db.ValueDate, lib, "duckdb_value_date")
-	purego.RegisterLibFunc(&db.ValueTime, lib, "duckdb_value_time")
-	purego.RegisterLibFunc(&db.ValueTimestamp, lib, "duckdb_value_timestamp")
-	purego.RegisterLibFunc(&db.ValueVarchar, lib, "duckdb_value_varchar")
-	purego.RegisterLibFunc(&db.ValueVarcharInternal, lib, "duckdb_value_varchar_internal")
-	// duckdb_value_string is not supported due to purego limitations
-	// duckdb_value_blob is not supported due to purego limitations
-	// duckdb_value_interval is not supported due to purego limitations
-	// purego: struct return values only supported on darwin arm64 & amd64
-	purego.RegisterLibFunc(&db.ValueNull, lib, "duckdb_value_is_null")
+	// NOTE: the whole deprecated duckdb_value_* family (and duckdb_row_count) is intentionally
+	// NOT registered. Result values are read through the data-chunk/vector API (see chunk.go),
+	// which is the non-deprecated path and also supports BLOB and INTERVAL.
 
 	purego.RegisterLibFunc(&db.DestroyResult, lib, "duckdb_destroy_result")
 
@@ -224,6 +194,7 @@ func NewDB(path string) (*DB, error) {
 
 	// Register error handling function
 	purego.RegisterLibFunc(&db.ResultError, lib, "duckdb_result_error")
+	purego.RegisterLibFunc(&db.Free, lib, "duckdb_free")
 
 	// Register Value interface functions
 	purego.RegisterLibFunc(&db.DestroyValue, lib, "duckdb_destroy_value")
@@ -241,9 +212,7 @@ func NewDB(path string) (*DB, error) {
 	// Register Data Chunk interface functions
 	purego.RegisterLibFunc(&db.FetchChunk, lib, "duckdb_fetch_chunk")
 	purego.RegisterLibFunc(&db.ResultReturnType, lib, "duckdb_result_return_type")
-	purego.RegisterLibFunc(&db.ResultGetChunk, lib, "duckdb_result_get_chunk")
-	purego.RegisterLibFunc(&db.ResultChunkCount, lib, "duckdb_result_chunk_count")
-	purego.RegisterLibFunc(&db.ResultIsStreaming, lib, "duckdb_result_is_streaming")
+	// duckdb_result_get_chunk / _chunk_count / _is_streaming are deprecated; use FetchChunk.
 	purego.RegisterLibFunc(&db.CreateDataChunk, lib, "duckdb_create_data_chunk")
 	purego.RegisterLibFunc(&db.DestroyDataChunk, lib, "duckdb_destroy_data_chunk")
 	purego.RegisterLibFunc(&db.DataChunkReset, lib, "duckdb_data_chunk_reset")
@@ -274,6 +243,13 @@ func NewDB(path string) (*DB, error) {
 	purego.RegisterLibFunc(&db.GetTypeID, lib, "duckdb_get_type_id")
 	purego.RegisterLibFunc(&db.DecimalWidth, lib, "duckdb_decimal_width")
 	purego.RegisterLibFunc(&db.DecimalScale, lib, "duckdb_decimal_scale")
+	purego.RegisterLibFunc(&db.DecimalInternalType, lib, "duckdb_decimal_internal_type")
+	purego.RegisterLibFunc(&db.EnumInternalType, lib, "duckdb_enum_internal_type")
+	purego.RegisterLibFunc(&db.EnumDictionarySize, lib, "duckdb_enum_dictionary_size")
+	purego.RegisterLibFunc(&db.EnumDictionaryValue, lib, "duckdb_enum_dictionary_value")
+	purego.RegisterLibFunc(&db.StructTypeChildCount, lib, "duckdb_struct_type_child_count")
+	purego.RegisterLibFunc(&db.StructTypeChildName, lib, "duckdb_struct_type_child_name")
+	purego.RegisterLibFunc(&db.ArrayTypeArraySize, lib, "duckdb_array_type_array_size")
 	purego.RegisterLibFunc(&db.DestroyLogicalType, lib, "duckdb_destroy_logical_type")
 
 	// Print library version

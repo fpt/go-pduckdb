@@ -242,20 +242,31 @@ func (tx *Tx) Rollback() error {
 
 // Rows implements database/sql/driver.Rows
 type Rows struct {
-	result      *duckdb.Result
-	columnCnt   int64
-	rowCnt      int64
-	currentRow  int64
-	columnNames []string
+	result        *duckdb.Result
+	columnCnt     int64
+	rowCnt        int64
+	currentRow    int64
+	columnNames   []string
+	columnTypes   []duckdb.DuckDBType
+	columnAliases []string
 }
 
 func newRows(result *duckdb.Result) *Rows {
+	cnt := result.ColumnCount()
+	types := make([]duckdb.DuckDBType, cnt)
+	aliases := make([]string, cnt)
+	for i := int64(0); i < cnt; i++ {
+		types[i] = result.ColumnType(i)
+		aliases[i] = result.ColumnAlias(i)
+	}
 	return &Rows{
-		result:      result,
-		columnCnt:   result.ColumnCount(),
-		rowCnt:      result.RowCount(),
-		currentRow:  0,
-		columnNames: result.ColumnNames(),
+		result:        result,
+		columnCnt:     cnt,
+		rowCnt:        result.RowCount(),
+		currentRow:    0,
+		columnNames:   result.ColumnNames(),
+		columnTypes:   types,
+		columnAliases: aliases,
 	}
 }
 
@@ -276,105 +287,29 @@ func (r *Rows) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
-	for i := int64(0); i < int64(r.columnCnt); i++ {
-		logicalType := r.result.ColumnLogicalType(i)
-		typeID := r.result.Db.GetTypeID(logicalType)
-		typeAlias := goString(r.result.Db.LogicalTypeGetAlias(logicalType))
-
-		switch typeID {
-		case duckdb.DuckDBTypeBoolean:
-			if val, ok := r.result.ValueBoolean(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeTinyint:
-			if val, ok := r.result.ValueInt8(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeSmallint:
-			if val, ok := r.result.ValueInt16(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeInteger:
-			if val, ok := r.result.ValueInt32(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeBigint:
-			if val, ok := r.result.ValueInt64(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeUTinyint:
-			if val, ok := r.result.ValueUint8(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeUSmallint:
-			if val, ok := r.result.ValueUint16(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeUInteger:
-			if val, ok := r.result.ValueUint32(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeUBigint:
-			if val, ok := r.result.ValueUint64(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeFloat:
-			if val, ok := r.result.ValueFloat(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeDouble:
-			if val, ok := r.result.ValueDouble(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeDate:
-			if val, ok := r.result.ValueDate(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeTime:
-			if val, ok := r.result.ValueTime(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeTimestamp:
-			if val, ok := r.result.ValueTimestamp(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		case duckdb.DuckDBTypeVarchar:
-			if typeAlias == "JSON" {
-				if val, ok := r.result.ValueVarchar(i, int32(r.currentRow)); ok {
-					dest[i] = val
-					continue
-				}
-			}
-			if val, ok := r.result.ValueString(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		default:
-			if val, ok := r.result.ValueString(i, int32(r.currentRow)); ok {
-				dest[i] = val
-				continue
-			}
-		}
-
-		// If all attempts fail, set to nil
-		dest[i] = nil
+	row := int32(r.currentRow)
+	for i := int64(0); i < r.columnCnt; i++ {
+		dest[i] = r.decode(i, row)
 	}
 
 	r.currentRow++
+	return nil
+}
+
+// decode reads a single cell as a driver.Value. JSON columns surface as raw
+// bytes for backward compatibility; every other type — scalar and nested — is
+// delegated to the shared value decoder, which returns nil for NULL and for
+// types not yet decoded (UNION/BIT/...).
+func (r *Rows) decode(col int64, row int32) driver.Value {
+	if r.columnTypes[col] == duckdb.DuckDBTypeVarchar && r.columnAliases[col] == "JSON" {
+		if v, ok := r.result.ValueVarchar(col, row); ok {
+			return v
+		}
+		return nil
+	}
+	if v, ok := r.result.ValueNested(col, row); ok {
+		return v
+	}
 	return nil
 }
 
@@ -385,10 +320,13 @@ func (r *Rows) ColumnTypeScanType(index int) reflect.Type {
 	return colType.GoType()
 }
 
-// ColumnTypeDatabaseTypeName returns column type information.
-// Implements RowsColumnTypeDatabaseTypeName
+// ColumnTypeDatabaseTypeName returns the database type name of the column
+// (e.g. "INTEGER", "VARCHAR", "JSON"). Implements RowsColumnTypeDatabaseTypeName.
 func (r *Rows) ColumnTypeDatabaseTypeName(index int) string {
-	return r.result.ColumnName(int64(index))
+	if alias := r.columnAliases[index]; alias != "" {
+		return alias
+	}
+	return r.columnTypes[index].String()
 }
 
 // ColumnTypeNullable returns column type information.
