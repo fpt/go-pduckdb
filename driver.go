@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"io"
+	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -20,10 +22,41 @@ func init() {
 // Driver implements database/sql/driver.Driver
 type Driver struct{}
 
+// splitDSN separates the database path from DuckDB configuration options.
+//
+// The last `?` separates, not the first: a DuckDB path may legitimately
+// contain one, and taking the first would make such a file unopenable through
+// database/sql with no way to say otherwise.
+func splitDSN(dsn string) (string, map[string]string) {
+	at := strings.LastIndex(dsn, "?")
+	if at < 0 {
+		return dsn, nil
+	}
+	query, err := url.ParseQuery(dsn[at+1:])
+	if err != nil || len(query) == 0 {
+		return dsn, nil
+	}
+	settings := make(map[string]string, len(query))
+	for name, values := range query {
+		settings[name] = values[len(values)-1]
+	}
+	return dsn[:at], settings
+}
+
 // Open returns a new connection to the database.
-// The dsn is a connection string for the database.
+//
+// The dsn is the path to the database file, optionally followed by DuckDB
+// configuration options as a query string:
+//
+//	sql.Open("duckdb", "warehouse.duckdb?access_mode=READ_ONLY")
+//	sql.Open("duckdb", ":memory:")
+//
+// A path containing a `?` that is not meant as options can be written
+// `./odd?name.duckdb?` -- the LAST `?` separates. Without one, the whole
+// string is the path, so existing callers are unaffected.
 func (d *Driver) Open(dsn string) (driver.Conn, error) {
-	db, err := NewDuckDB(dsn)
+	path, settings := splitDSN(dsn)
+	db, err := NewDuckDBWithSettings(path, settings)
 	if err != nil {
 		return nil, err
 	}

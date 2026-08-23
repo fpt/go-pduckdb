@@ -362,6 +362,10 @@ type DuckDBPreparedStatement unsafe.Pointer
 // DuckDBDatabase represents a DuckDB database
 type DuckDBDatabase unsafe.Pointer
 
+// DuckDBConfig is a duckdb_config: options applied when a database is opened.
+// Created and destroyed by the caller, never by DuckDB.
+type DuckDBConfig unsafe.Pointer
+
 // DuckDBLogicalType represents a DuckDB logical type
 type DuckDBLogicalType unsafe.Pointer
 
