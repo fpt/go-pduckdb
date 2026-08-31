@@ -1,4 +1,14 @@
-.PHONY: integ
+# These targets are convenience, and they assume GNU make and a POSIX shell:
+# Linux, macOS, or WSL / Git Bash on Windows. They are not the build.
+#
+# The build and the tests are the Go toolchain alone, and run wherever Go and
+# libduckdb do. On Windows, with duckdb.dll resolvable:
+#
+#     go test ./...
+#
+# `make help` and the docker targets are the parts that want a POSIX shell.
+
+.PHONY: run test fmt lint integ integ-arm64 help
 
 run: ## Run the application
 	CGO_ENABLED=0 go run example/simple/main.go
@@ -27,5 +37,5 @@ integ-arm64: ## Run integration tests on arm64
 	docker run --rm go-pduckdb/integ-arm64
 
 help: ## Display this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'
