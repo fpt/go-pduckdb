@@ -29,7 +29,12 @@ In short, go-pduckdb moves the DuckDB dependency from build time to run time —
 
 See [docs/COMPATIBILITY.md](./docs/COMPATIBILITY.md) for the full supported feature matrix (platforms, database/sql interfaces, and data types).
 
-See [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) for opening a database with DuckDB configuration options, and what to weigh before accepting those options from outside your process.
+See [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) for opening a database with DuckDB configuration options.
+
+> **Disclaimer:** go-pduckdb is just glue, not a secure wrapper. Design your own
+> security model when you use this package. A DuckDB DSN carries engine
+> configuration — extension loading, filesystem reach, machine resources — so what
+> may set it is a decision for the integrating application.
 
 ## Installation
 

@@ -27,20 +27,30 @@ type Driver struct{}
 // The last `?` separates, not the first: a DuckDB path may legitimately
 // contain one, and taking the first would make such a file unopenable through
 // database/sql with no way to say otherwise.
-func splitDSN(dsn string) (string, map[string]string) {
+//
+// A repeated option is an error rather than a silent last-one-wins. DSNs get
+// built by concatenation, and `access_mode=READ_ONLY&access_mode=READ_WRITE`
+// has no answer that is safe to guess: picking either one quietly overrides
+// what some other part of the program asked for.
+func splitDSN(dsn string) (string, map[string]string, error) {
 	at := strings.LastIndex(dsn, "?")
 	if at < 0 {
-		return dsn, nil
+		return dsn, nil, nil
 	}
 	query, err := url.ParseQuery(dsn[at+1:])
 	if err != nil || len(query) == 0 {
-		return dsn, nil
+		return dsn, nil, nil
 	}
 	settings := make(map[string]string, len(query))
 	for name, values := range query {
-		settings[name] = values[len(values)-1]
+		if len(values) > 1 {
+			return "", nil, errors.Errorf(
+				"duckdb: option %q is set %d times in the DSN; set it once", name, len(values),
+			)
+		}
+		settings[name] = values[0]
 	}
-	return dsn[:at], settings
+	return dsn[:at], settings, nil
 }
 
 // Open returns a new connection to the database.
@@ -55,7 +65,10 @@ func splitDSN(dsn string) (string, map[string]string) {
 // `./odd?name.duckdb?` -- the LAST `?` separates. Without one, the whole
 // string is the path, so existing callers are unaffected.
 func (d *Driver) Open(dsn string) (driver.Conn, error) {
-	path, settings := splitDSN(dsn)
+	path, settings, err := splitDSN(dsn)
+	if err != nil {
+		return nil, err
+	}
 	db, err := NewDuckDBWithSettings(path, settings)
 	if err != nil {
 		return nil, err

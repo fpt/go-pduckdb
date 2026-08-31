@@ -34,11 +34,42 @@ func TestSplitDSN(t *testing.T) {
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			path, settings := splitDSN(c.dsn)
+			path, settings, err := splitDSN(c.dsn)
+			if err != nil {
+				t.Fatalf("splitDSN(%q) returned an unexpected error: %v", c.dsn, err)
+			}
 			if path != c.path || !reflect.DeepEqual(settings, c.settings) {
 				t.Errorf("splitDSN(%q) = %q, %v; want %q, %v", c.dsn, path, settings, c.path, c.settings)
 			}
 		})
+	}
+}
+
+// A repeated option is refused rather than resolved. A DSN built by
+// concatenation can end up asking for two different things, and quietly
+// honouring one of them is how a read-only database becomes writable.
+func TestSplitDSNRejectsARepeatedOption(t *testing.T) {
+	for _, dsn := range []string{
+		"w.duckdb?access_mode=READ_ONLY&access_mode=READ_WRITE",
+		"w.duckdb?threads=2&threads=2",
+		"w.duckdb?threads=1&access_mode=READ_ONLY&threads=8",
+	} {
+		if _, _, err := splitDSN(dsn); err == nil {
+			t.Errorf("splitDSN(%q) accepted a repeated option; want an error", dsn)
+		}
+	}
+}
+
+// The error has to reach the caller of sql.Open, not just splitDSN.
+func TestOpenRejectsARepeatedOption(t *testing.T) {
+	db, err := sql.Open("duckdb", filepath.Join(t.TempDir(), "w.duckdb")+
+		"?access_mode=READ_ONLY&access_mode=READ_WRITE")
+	if err != nil {
+		return // refused this early is fine too
+	}
+	defer func() { _ = db.Close() }()
+	if err := db.Ping(); err == nil {
+		t.Error("sql.Open accepted a DSN setting access_mode twice; want an error")
 	}
 }
 
