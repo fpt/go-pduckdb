@@ -26,8 +26,13 @@ security model you design is informed by it.
 ## DSN parsing
 
 - **The last `?` separates**, not the first, so a path containing `?` stays
-  openable. A path whose own name ends in `?` is written `./odd?name.duckdb?`.
+  openable.
+- **A trailing `?` says "no options"**: `odd?name.duckdb?` opens the file
+  `odd?name.duckdb`. Double it — `odd?name.duckdb??` — to name a file that
+  really does end in `?`.
 - **A DSN with no `?` takes the plain `duckdb_open` path**, unchanged.
+- **A malformed query is an error**, not a filename. `w.duckdb?access_mode=%ZZ`
+  is refused rather than creating a file named after the typo.
 - **An unrecognised option fails the open** with DuckDB's message
   (`The following options were not recognized: ...`) rather than being silently
   dropped. So does a bad value: `access_mode=NONSENSE` refuses to open.

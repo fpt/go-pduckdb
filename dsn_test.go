@@ -28,8 +28,14 @@ func TestSplitDSN(t *testing.T) {
 			"odd?name.duckdb",
 			map[string]string{"access_mode": "READ_ONLY"},
 		},
+		// A trailing ? says "no options", so this names the file odd?name.duckdb.
 		{
-			"a trailing question mark is part of the path", "odd?name.duckdb?",
+			"a trailing question mark escapes the path", "odd?name.duckdb?",
+			"odd?name.duckdb", nil,
+		},
+		// ...and doubling it names a file that really does end in ?.
+		{
+			"a doubled question mark is a path ending in one", "odd?name.duckdb??",
 			"odd?name.duckdb?", nil,
 		},
 	} {
@@ -56,6 +62,22 @@ func TestSplitDSNRejectsARepeatedOption(t *testing.T) {
 	} {
 		if _, _, err := splitDSN(dsn); err == nil {
 			t.Errorf("splitDSN(%q) accepted a repeated option; want an error", dsn)
+		}
+	}
+}
+
+// A malformed query is refused rather than quietly becoming a filename. The
+// alternative is creating a file named after the typo and never reporting the
+// option that was actually wrong.
+func TestSplitDSNRejectsAMalformedQuery(t *testing.T) {
+	for _, dsn := range []string{
+		"w.duckdb?access_mode=%ZZ",
+		"w.duckdb?%",
+		"w.duckdb?a=1;b=2&%GG=x",
+	} {
+		path, settings, err := splitDSN(dsn)
+		if err == nil {
+			t.Errorf("splitDSN(%q) = %q, %v, nil; want an error", dsn, path, settings)
 		}
 	}
 }
@@ -108,6 +130,26 @@ func TestReadOnlyRefusesAWrite(t *testing.T) {
 	}
 	if _, err := readonly.Exec("INSERT INTO t VALUES (2)"); err == nil {
 		t.Error("a read-only database accepted a write")
+	}
+}
+
+// Closing a database must release the file, not merely stop using it. DuckDB
+// keeps the instance alive while a connection to it exists, so a driver that
+// closes without disconnecting leaves the file open -- unnoticeable on POSIX,
+// but the next open fails on Windows.
+func TestCloseReleasesTheFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "reopen.duckdb")
+	for i := range 3 {
+		db, err := sql.Open("duckdb", path)
+		if err != nil {
+			t.Skipf("no DuckDB library available: %v", err)
+		}
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS t (a INTEGER)"); err != nil {
+			t.Fatalf("open %d: %v", i, err)
+		}
+		if err := db.Close(); err != nil {
+			t.Fatalf("close %d: %v", i, err)
+		}
 	}
 }
 
