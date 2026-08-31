@@ -50,6 +50,11 @@ unchanged. The **last** `?` separates path from options, so a database file
 whose name contains one is still reachable. An option DuckDB does not
 recognise fails the open with DuckDB's own message rather than being ignored.
 
+Every option DuckDB accepts at open time is accepted here — the driver applies
+no allowlist. Some of them govern extension loading, filesystem reach and
+machine resources. See [CONFIGURATION.md](./CONFIGURATION.md) before building a
+DSN from anything you did not write yourself.
+
 ## database/sql driver interface
 
 | Feature | Status | Notes |
