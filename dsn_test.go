@@ -14,15 +14,24 @@ func TestSplitDSN(t *testing.T) {
 	}{
 		{"a plain path", "warehouse.duckdb", "warehouse.duckdb", nil},
 		{"in memory", ":memory:", ":memory:", nil},
-		{"read only", "w.duckdb?access_mode=READ_ONLY", "w.duckdb",
-			map[string]string{"access_mode": "READ_ONLY"}},
-		{"several options", "w.duckdb?access_mode=READ_ONLY&threads=2", "w.duckdb",
-			map[string]string{"access_mode": "READ_ONLY", "threads": "2"}},
+		{
+			"read only", "w.duckdb?access_mode=READ_ONLY", "w.duckdb",
+			map[string]string{"access_mode": "READ_ONLY"},
+		},
+		{
+			"several options", "w.duckdb?access_mode=READ_ONLY&threads=2", "w.duckdb",
+			map[string]string{"access_mode": "READ_ONLY", "threads": "2"},
+		},
 		// The LAST ? separates, so a path containing one is still openable.
-		{"a path with a question mark", "odd?name.duckdb?access_mode=READ_ONLY",
-			"odd?name.duckdb", map[string]string{"access_mode": "READ_ONLY"}},
-		{"a trailing question mark is part of the path", "odd?name.duckdb?",
-			"odd?name.duckdb?", nil},
+		{
+			"a path with a question mark", "odd?name.duckdb?access_mode=READ_ONLY",
+			"odd?name.duckdb",
+			map[string]string{"access_mode": "READ_ONLY"},
+		},
+		{
+			"a trailing question mark is part of the path", "odd?name.duckdb?",
+			"odd?name.duckdb?", nil,
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			path, settings := splitDSN(c.dsn)
