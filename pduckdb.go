@@ -12,7 +12,20 @@ type DuckDB struct {
 
 // NewDuckDB creates a new DuckDB instance
 func NewDuckDB(path string) (*DuckDB, error) {
-	db, err := duckdb.NewDB(path)
+	return NewDuckDBWithSettings(path, nil)
+}
+
+// NewDuckDBWithSettings opens a database with DuckDB configuration options
+// applied before it opens.
+//
+//	db, err := NewDuckDBWithSettings("warehouse.duckdb",
+//	    map[string]string{"access_mode": "READ_ONLY"})
+//
+// Read-only is the option this exists for. A process that only ever reads
+// should not be able to write by accident, and asking the engine to enforce
+// that is worth more than intending it.
+func NewDuckDBWithSettings(path string, settings map[string]string) (*DuckDB, error) {
+	db, err := duckdb.NewDB(path, settings)
 	if err != nil {
 		return nil, err
 	}

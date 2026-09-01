@@ -37,6 +37,24 @@ DLL discovery on Windows: `DUCKDB_LIBRARY_PATH`, then `duckdb.dll` in the
 current directory, `%ProgramFiles%\DuckDB\`, `%ProgramFiles(x86)%\DuckDB\`, and
 finally the standard `LoadLibrary` search path (`PATH`).
 
+## Opening a database
+
+| Feature | Status | Notes |
+|---|---|---|
+| Path | ✅ | `sql.Open("duckdb", "warehouse.duckdb")`, or `:memory:` |
+| Configuration options | ✅ | As a DSN query string: `"warehouse.duckdb?access_mode=READ_ONLY&threads=2"` |
+| Read-only | ✅ | `access_mode=READ_ONLY` — the database refuses writes, rather than the caller intending not to make any |
+
+Options go through `duckdb_open_ext`; a path with no `?` uses `duckdb_open`
+unchanged. The **last** `?` separates path from options, and a trailing `?`
+means "no options", so a database file whose name contains one is still
+reachable. An option DuckDB does not recognise fails the open with DuckDB's own
+message rather than being ignored, as does a malformed query string.
+
+Every option DuckDB accepts at open time is accepted here; a repeated option is
+an error rather than a silent last-one-wins. See
+[CONFIGURATION.md](./CONFIGURATION.md) for what those options can reach.
+
 ## database/sql driver interface
 
 | Feature | Status | Notes |

@@ -133,7 +133,13 @@ type DB struct {
 }
 
 // NewDB creates a new internal database instance
-func NewDB(path string) (*DB, error) {
+// NewDB opens a database.
+//
+// settings are DuckDB configuration options, applied before the database is
+// opened -- `access_mode: READ_ONLY` is the one that motivated this, since a
+// process that only ever reads should not be able to write by accident. With
+// no settings the plain duckdb_open path is used, unchanged.
+func NewDB(path string, settings map[string]string) (*DB, error) {
 	db := &DB{}
 
 	// Load DuckDB library
@@ -146,6 +152,14 @@ func NewDB(path string) (*DB, error) {
 	// Register DuckDB functions
 	var open func(path string, out *DuckDBDatabase) DuckDBState
 	purego.RegisterLibFunc(&open, lib, "duckdb_open")
+	var openExt func(path string, out *DuckDBDatabase, config DuckDBConfig, err **byte) DuckDBState
+	purego.RegisterLibFunc(&openExt, lib, "duckdb_open_ext")
+	var createConfig func(out *DuckDBConfig) DuckDBState
+	purego.RegisterLibFunc(&createConfig, lib, "duckdb_create_config")
+	var setConfig func(config DuckDBConfig, name, option string) DuckDBState
+	purego.RegisterLibFunc(&setConfig, lib, "duckdb_set_config")
+	var destroyConfig func(config *DuckDBConfig)
+	purego.RegisterLibFunc(&destroyConfig, lib, "duckdb_destroy_config")
 	purego.RegisterLibFunc(&db.Connect, lib, "duckdb_connect")
 	purego.RegisterLibFunc(&db.Close, lib, "duckdb_close")
 	purego.RegisterLibFunc(&db.Disconnect, lib, "duckdb_disconnect")
@@ -265,9 +279,38 @@ func NewDB(path string) (*DB, error) {
 
 	// Open database
 	var handle DuckDBDatabase
-	state := open(path, &handle)
-	if state != DuckDBSuccess {
-		return nil, fmt.Errorf("failed to open database: %s", path)
+	if len(settings) == 0 {
+		if open(path, &handle) != DuckDBSuccess {
+			return nil, fmt.Errorf("failed to open database: %s", path)
+		}
+		db.Handle = handle
+		return db, nil
+	}
+
+	// With settings, go through duckdb_open_ext: it is the only entry point
+	// that takes a configuration, and the only way to ask for a read-only
+	// database. DuckDB reports why it refused through an out parameter that
+	// the caller owns and must free.
+	var config DuckDBConfig
+	if createConfig(&config) != DuckDBSuccess {
+		return nil, fmt.Errorf("failed to create a DuckDB configuration")
+	}
+	defer destroyConfig(&config)
+	for name, value := range settings {
+		if setConfig(config, name, value) != DuckDBSuccess {
+			return nil, fmt.Errorf("DuckDB rejected the setting %s=%s", name, value)
+		}
+	}
+	var openErr *byte
+	if openExt(path, &handle, config, &openErr) != DuckDBSuccess {
+		message := GoString(openErr)
+		if openErr != nil {
+			db.Free(unsafe.Pointer(openErr))
+		}
+		if message == "" {
+			message = "no reason given"
+		}
+		return nil, fmt.Errorf("failed to open database %s: %s", path, message)
 	}
 	db.Handle = handle
 

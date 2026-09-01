@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"io"
+	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -20,10 +22,64 @@ func init() {
 // Driver implements database/sql/driver.Driver
 type Driver struct{}
 
+// splitDSN separates the database path from DuckDB configuration options.
+//
+// The last `?` separates, not the first: a DuckDB path may legitimately
+// contain one, and taking the first would make such a file unopenable through
+// database/sql with no way to say otherwise. A trailing `?` says "no options",
+// so `odd?name.duckdb?` is the file `odd?name.duckdb`; double it to name a
+// file that really does end in `?`.
+//
+// A malformed query is an error rather than a path. Falling back to opening
+// the whole string would create a file named after the typo and never report
+// the bad option.
+//
+// A repeated option is an error rather than a silent last-one-wins. DSNs get
+// built by concatenation, and `access_mode=READ_ONLY&access_mode=READ_WRITE`
+// has no answer that is safe to guess: picking either one quietly overrides
+// what some other part of the program asked for.
+func splitDSN(dsn string) (string, map[string]string, error) {
+	at := strings.LastIndex(dsn, "?")
+	if at < 0 {
+		return dsn, nil, nil
+	}
+	path, query := dsn[:at], dsn[at+1:]
+	if query == "" {
+		return path, nil, nil
+	}
+	values, err := url.ParseQuery(query)
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "duckdb: cannot parse the options in %q", dsn)
+	}
+	settings := make(map[string]string, len(values))
+	for name, v := range values {
+		if len(v) > 1 {
+			return "", nil, errors.Errorf(
+				"duckdb: option %q is set %d times in the DSN; set it once", name, len(v),
+			)
+		}
+		settings[name] = v[0]
+	}
+	return path, settings, nil
+}
+
 // Open returns a new connection to the database.
-// The dsn is a connection string for the database.
+//
+// The dsn is the path to the database file, optionally followed by DuckDB
+// configuration options as a query string:
+//
+//	sql.Open("duckdb", "warehouse.duckdb?access_mode=READ_ONLY")
+//	sql.Open("duckdb", ":memory:")
+//
+// A path containing a `?` that is not meant as options can be written
+// `./odd?name.duckdb?` -- the LAST `?` separates. Without one, the whole
+// string is the path, so existing callers are unaffected.
 func (d *Driver) Open(dsn string) (driver.Conn, error) {
-	db, err := NewDuckDB(dsn)
+	path, settings, err := splitDSN(dsn)
+	if err != nil {
+		return nil, err
+	}
+	db, err := NewDuckDBWithSettings(path, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +235,20 @@ func (c *Conn) Ping(ctx context.Context) error {
 
 // Close closes the connection.
 func (c *Conn) Close() error {
-	c.db.Close() // This will close the connection as well
+	// Disconnect first. duckdb_close only releases the database once the last
+	// connection to it is gone -- the C API holds the instance by reference
+	// count -- so closing without disconnecting leaves the file open. POSIX
+	// hides that; on Windows the next open of the same path fails with "the
+	// process cannot access the file because it is being used by another
+	// process".
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+	if c.db != nil {
+		c.db.Close()
+		c.db = nil
+	}
 	return nil
 }
 
