@@ -60,7 +60,7 @@ an error rather than a silent last-one-wins. See
 | Feature | Status | Notes |
 |---|---|---|
 | Query / Exec | ✅ | |
-| Prepared statements | ✅ | Positional `?` placeholders; parameter type inference |
+| Prepared statements | ✅ | Positional `?` placeholders; values are converted to the type DuckDB infers for each parameter |
 | Parameter binding | ✅ | See [Parameter conversions](#parameter-conversions-go--duckdb) |
 | Slice arguments | ✅ | `driver.NamedValueChecker`; bound as LIST |
 | Transactions (`Begin`/`Commit`/`Rollback`) | ✅ | `driver.ConnBeginTx` |
@@ -115,6 +115,13 @@ Result values are decoded through DuckDB's data-chunk / vector API.
 | `[]byte` | BLOB |
 | `time.Time` | DATE, TIME, or TIMESTAMP |
 | `[]T` for `T` in `bool`, `int`, `int8`–`int64`, `uint`, `uint16`–`uint64`, `float32`, `float64`, `string`, or such a slice | LIST of the matching type (`[]int64` → `BIGINT[]`, `[][]string` → `VARCHAR[][]`), cast by DuckDB where the parameter has a known type. Works where DuckDB cannot infer the parameter type, e.g. `unnest(?)` or `read_json(?)` with a list of paths. Types implementing `driver.Valuer` use `Value()` instead |
+
+Where DuckDB cannot infer a parameter's type, such as the argument of a table
+function (`read_json(?)`) or of a function taking `ANY` (`from_json(?, …)`), the
+value is bound by its Go type instead: `bool` → BOOLEAN, signed integers →
+BIGINT, unsigned integers → UBIGINT, `float32` / `float64` → FLOAT / DOUBLE,
+`string` → VARCHAR, `[]byte` → BLOB, `time.Time` → TIMESTAMP. No `?::VARCHAR`
+cast is needed.
 
 ## Requirements
 
