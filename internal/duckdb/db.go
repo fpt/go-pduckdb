@@ -61,6 +61,7 @@ type DB struct {
 	BindDate      func(DuckDBPreparedStatement, int32, int32) DuckDBState
 	BindTime      func(DuckDBPreparedStatement, int32, int64) DuckDBState
 	BindTimestamp func(DuckDBPreparedStatement, int32, int64) DuckDBState
+	BindValue     func(DuckDBPreparedStatement, int64, DuckDBValue) DuckDBState
 	// BindInterval is not supported due to purego limitations
 
 	// Error handling
@@ -73,8 +74,15 @@ type DB struct {
 	// Value interface functions
 	DestroyValue    func(*DuckDBValue)
 	CreateVarchar   func(string) DuckDBValue
+	CreateInt8      func(int8) DuckDBValue
+	CreateInt16     func(int16) DuckDBValue
 	CreateInt32     func(int32) DuckDBValue
 	CreateInt64     func(int64) DuckDBValue
+	CreateUint8     func(uint8) DuckDBValue
+	CreateUint16    func(uint16) DuckDBValue
+	CreateUint32    func(uint32) DuckDBValue
+	CreateUint64    func(uint64) DuckDBValue
+	CreateFloat     func(float32) DuckDBValue
 	CreateDouble    func(float64) DuckDBValue
 	CreateBool      func(bool) DuckDBValue
 	CreateListValue func(DuckDBLogicalType, *DuckDBValue, int64) DuckDBValue
@@ -207,6 +215,7 @@ func NewDB(path string, settings map[string]string) (*DB, error) {
 	purego.RegisterLibFunc(&db.BindDate, lib, "duckdb_bind_date")
 	purego.RegisterLibFunc(&db.BindTime, lib, "duckdb_bind_time")
 	purego.RegisterLibFunc(&db.BindTimestamp, lib, "duckdb_bind_timestamp")
+	purego.RegisterLibFunc(&db.BindValue, lib, "duckdb_bind_value")
 
 	// Register error handling function
 	purego.RegisterLibFunc(&db.ResultError, lib, "duckdb_result_error")
@@ -215,8 +224,15 @@ func NewDB(path string, settings map[string]string) (*DB, error) {
 	// Register Value interface functions
 	purego.RegisterLibFunc(&db.DestroyValue, lib, "duckdb_destroy_value")
 	purego.RegisterLibFunc(&db.CreateVarchar, lib, "duckdb_create_varchar")
+	purego.RegisterLibFunc(&db.CreateInt8, lib, "duckdb_create_int8")
+	purego.RegisterLibFunc(&db.CreateInt16, lib, "duckdb_create_int16")
 	purego.RegisterLibFunc(&db.CreateInt32, lib, "duckdb_create_int32")
 	purego.RegisterLibFunc(&db.CreateInt64, lib, "duckdb_create_int64")
+	purego.RegisterLibFunc(&db.CreateUint8, lib, "duckdb_create_uint8")
+	purego.RegisterLibFunc(&db.CreateUint16, lib, "duckdb_create_uint16")
+	purego.RegisterLibFunc(&db.CreateUint32, lib, "duckdb_create_uint32")
+	purego.RegisterLibFunc(&db.CreateUint64, lib, "duckdb_create_uint64")
+	purego.RegisterLibFunc(&db.CreateFloat, lib, "duckdb_create_float")
 	purego.RegisterLibFunc(&db.CreateDouble, lib, "duckdb_create_double")
 	purego.RegisterLibFunc(&db.CreateBool, lib, "duckdb_create_bool")
 	purego.RegisterLibFunc(&db.CreateListValue, lib, "duckdb_create_list_value")

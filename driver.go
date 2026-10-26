@@ -233,6 +233,20 @@ func (c *Conn) Ping(ctx context.Context) error {
 	return nil
 }
 
+// CheckNamedValue implements driver.NamedValueChecker. It accepts slices such
+// as []string and []int64, which are bound as LIST parameters and which the
+// default converter would reject. Everything else, including []byte and types
+// implementing driver.Valuer, goes through the default conversion.
+func (c *Conn) CheckNamedValue(nv *driver.NamedValue) error {
+	if _, ok := nv.Value.(driver.Valuer); ok {
+		return driver.ErrSkip
+	}
+	if duckdb.IsListParam(nv.Value) {
+		return nil
+	}
+	return driver.ErrSkip
+}
+
 // Close closes the connection.
 func (c *Conn) Close() error {
 	// Disconnect first. duckdb_close only releases the database once the last
@@ -531,6 +545,7 @@ var (
 	_ driver.ExecerContext                  = (*Conn)(nil)
 	_ driver.QueryerContext                 = (*Conn)(nil)
 	_ driver.Pinger                         = (*Conn)(nil)
+	_ driver.NamedValueChecker              = (*Conn)(nil)
 	_ driver.Result                         = (*Result)(nil)
 	_ driver.Rows                           = (*Rows)(nil)
 	_ driver.RowsColumnTypeScanType         = (*Rows)(nil)
