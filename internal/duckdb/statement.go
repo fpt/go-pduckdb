@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"time"
+	"unsafe"
 
 	"github.com/fpt/go-pduckdb/internal/convert"
 	"github.com/pkg/errors"
@@ -136,9 +138,24 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 		return nil
 	}
 
-	// Use DuckDB parameter type to guide binding if available
-	if logicalType == nil {
-		return fmt.Errorf("parameter type is invalid")
+	if logicalType != nil {
+		defer ps.conn.db.DestroyLogicalType(&logicalType)
+	}
+
+	// DuckDB cannot infer the type of some parameters, such as the argument of
+	// a table function (read_json(?)) or of a function taking ANY. Those are
+	// bound by the Go value's type instead.
+	if logicalType == nil || isUnknownParamType(ps.conn.db.GetTypeID(logicalType)) {
+		goType, err := paramTypeOf(value)
+		if err != nil {
+			return fmt.Errorf("failed to bind parameter: %w", err)
+		}
+		inferred := ps.conn.db.CreateLogicalType(goType)
+		defer ps.conn.db.DestroyLogicalType(&inferred)
+		if err := bindParameter(ps.conn.db, ps.handle, paramIdx, value, inferred); err != nil {
+			return fmt.Errorf("failed to bind parameter: %w", err)
+		}
+		return nil
 	}
 
 	err := bindParameter(ps.conn.db, ps.handle, paramIdx, value, logicalType)
@@ -147,6 +164,36 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 	}
 
 	return nil
+}
+
+// isUnknownParamType reports whether DuckDB left a parameter's type open.
+func isUnknownParamType(t DuckDBType) bool {
+	return t == DuckDBTypeInvalid || t == DuckDBTypeAny
+}
+
+// paramTypeOf picks the DuckDB type to bind a value as when the parameter's
+// type is unknown.
+func paramTypeOf(value any) (DuckDBType, error) {
+	switch value.(type) {
+	case bool:
+		return DuckDBTypeBoolean, nil
+	case int, int8, int16, int32, int64:
+		return DuckDBTypeBigint, nil
+	case uint, uint8, uint16, uint32, uint64:
+		return DuckDBTypeUBigint, nil
+	case float32:
+		return DuckDBTypeFloat, nil
+	case float64:
+		return DuckDBTypeDouble, nil
+	case string:
+		return DuckDBTypeVarchar, nil
+	case []byte:
+		return DuckDBTypeBlob, nil
+	case time.Time:
+		return DuckDBTypeTimestamp, nil
+	default:
+		return DuckDBTypeInvalid, fmt.Errorf("cannot bind %T to a parameter of unknown type", value)
+	}
 }
 
 // bindList binds a slice accepted by IsListParam as a LIST value.
@@ -387,8 +434,23 @@ func bindParameter(
 		}
 
 	case DuckDBTypeBlob:
-		// DuckDBTypeBlob is not supported.
-		return fmt.Errorf("blob type is not supported")
+		var b []byte
+		switch v := value.(type) {
+		case []byte:
+			b = v
+		case string:
+			b = []byte(v)
+		default:
+			return fmt.Errorf("failed to convert %T to BLOB", value)
+		}
+		// duckdb_bind_blob copies the bytes; an empty blob still needs a
+		// valid pointer.
+		var empty [1]byte
+		data := unsafe.Pointer(&empty[0])
+		if len(b) > 0 {
+			data = unsafe.Pointer(&b[0])
+		}
+		state = db.BindBlob(ps, idx, data, int64(len(b)))
 
 	case DuckDBTypeDate:
 		// Convert to Date
