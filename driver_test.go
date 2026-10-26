@@ -957,3 +957,17 @@ func TestVarintValue(t *testing.T) {
 	assert.True(t, ok, "Expected a string rendering")
 	assert.Equal(t, "99999999999999999999999999999999999999999999999999", s)
 }
+
+// A statement run without arguments goes through duckdb_query rather than the
+// prepared path; its error must still carry DuckDB's message.
+func TestQueryErrorCarriesDuckDBMessage(t *testing.T) {
+	sqlDB, err := sql.Open("duckdb", ":memory:")
+	assert.NoError(t, err)
+	defer func() { assert.NoError(t, sqlDB.Close()) }()
+
+	_, err = sqlDB.Exec("CREATE TABLE t AS SELECT nope")
+	assert.ErrorContains(t, err, "Binder Error")
+
+	_, err = sqlDB.Query("SELECT nope")
+	assert.ErrorContains(t, err, "Binder Error")
+}
