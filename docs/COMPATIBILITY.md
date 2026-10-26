@@ -62,6 +62,7 @@ an error rather than a silent last-one-wins. See
 | Query / Exec | ✅ | |
 | Prepared statements | ✅ | Positional `?` placeholders; parameter type inference |
 | Parameter binding | ✅ | See [Parameter conversions](#parameter-conversions-go--duckdb) |
+| Slice arguments | ✅ | `driver.NamedValueChecker`; bound as LIST |
 | Transactions (`Begin`/`Commit`/`Rollback`) | ✅ | `driver.ConnBeginTx` |
 | Context support | ⚠️ | Cancellation is checked before execution, not during a running query |
 | `Ping` | ✅ | `driver.Pinger` |
@@ -113,6 +114,7 @@ Result values are decoded through DuckDB's data-chunk / vector API.
 | `string` | VARCHAR (or inferred type based on content) |
 | `[]byte` | BLOB |
 | `time.Time` | DATE, TIME, or TIMESTAMP |
+| `[]T` for `T` in `bool`, `int`, `int8`–`int64`, `uint`, `uint16`–`uint64`, `float32`, `float64`, `string`, or such a slice | LIST of the matching type (`[]int64` → `BIGINT[]`, `[][]string` → `VARCHAR[][]`), cast by DuckDB where the parameter has a known type. Works where DuckDB cannot infer the parameter type, e.g. `unnest(?)` or `read_json(?)` with a list of paths. Types implementing `driver.Valuer` use `Value()` instead |
 
 ## Requirements
 

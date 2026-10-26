@@ -4,6 +4,7 @@ package duckdb
 import (
 	"fmt"
 	"math"
+	"reflect"
 
 	"github.com/fpt/go-pduckdb/internal/convert"
 	"github.com/pkg/errors"
@@ -109,6 +110,13 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 		return fmt.Errorf("bind functions not available")
 	}
 
+	// A slice is bound as a LIST built from its Go type. DuckDB often cannot
+	// infer the type of a list parameter (unnest(?), read_json(?)), so this
+	// must not depend on the parameter's logical type.
+	if IsListParam(value) {
+		return ps.bindList(paramIdx, value)
+	}
+
 	// Get parameter type information if available
 	var logicalType DuckDBLogicalType
 	if ps.conn.db.ParamLogicalType != nil {
@@ -138,6 +146,21 @@ func (ps *PreparedStatement) BindParameter(paramIdx int, value any) error {
 		return fmt.Errorf("failed to bind parameter: %w", err)
 	}
 
+	return nil
+}
+
+// bindList binds a slice accepted by IsListParam as a LIST value.
+func (ps *PreparedStatement) bindList(paramIdx int, value any) error {
+	db := ps.conn.db
+	list, err := db.createListValue(reflect.ValueOf(value))
+	if err != nil {
+		return fmt.Errorf("failed to bind parameter: %w", err)
+	}
+	// duckdb_bind_value copies the value.
+	defer db.DestroyValue(&list)
+	if db.BindValue(ps.handle, int64(paramIdx), list) != DuckDBSuccess {
+		return fmt.Errorf("failed to bind %T as a LIST parameter", value)
+	}
 	return nil
 }
 
