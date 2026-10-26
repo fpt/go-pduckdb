@@ -20,11 +20,14 @@ type Person struct {
 
 // Implement the sql.Scanner interface for Person
 func (p *Person) Scan(src any) error {
-	b, ok := src.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	switch v := src.(type) {
+	case string:
+		return json.Unmarshal([]byte(v), p)
+	case []byte:
+		return json.Unmarshal(v, p)
+	default:
+		return errors.Errorf("cannot scan %T into Person", src)
 	}
-	return json.Unmarshal(b, p)
 }
 
 func main() {

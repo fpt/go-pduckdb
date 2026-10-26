@@ -88,6 +88,7 @@ Result values are decoded through DuckDB's data-chunk / vector API.
 | DECIMAL | `string` | Exact decimal representation |
 | VARINT | `string` | Arbitrary-precision integer, decimal string |
 | VARCHAR | `string` | |
+| JSON | `string` | Alias of VARCHAR. v0.2.0 and earlier returned `[]byte`. Scan into `*string` or `*[]byte`; `*json.RawMessage` is not supported |
 | BLOB | `[]byte` | |
 | UUID | `string` | |
 | ENUM | `string` | Dictionary value |

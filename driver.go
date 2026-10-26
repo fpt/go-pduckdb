@@ -365,17 +365,11 @@ func (r *Rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-// decode reads a single cell as a driver.Value. JSON columns surface as raw
-// bytes for backward compatibility; every other type — scalar and nested — is
-// delegated to the shared value decoder, which returns nil for NULL and for
-// types not yet decoded (UNION/BIT/...).
+// decode reads a single cell as a driver.Value. Every type — scalar and
+// nested — is delegated to the shared value decoder, which returns nil for NULL
+// and for types not yet decoded (UNION/BIT/...). JSON is an alias of VARCHAR
+// and decodes as string like it.
 func (r *Rows) decode(col int64, row int32) driver.Value {
-	if r.columnTypes[col] == duckdb.DuckDBTypeVarchar && r.columnAliases[col] == "JSON" {
-		if v, ok := r.result.ValueVarchar(col, row); ok {
-			return v
-		}
-		return nil
-	}
 	if v, ok := r.result.ValueNested(col, row); ok {
 		return v
 	}
