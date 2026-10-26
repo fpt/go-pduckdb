@@ -157,8 +157,10 @@ func (ps *PreparedStatement) Execute() (*Result, error) {
 		// Get error message if possible
 		if ps.conn.db.ResultError != nil {
 			errMsg := GoString(ps.conn.db.ResultError(&rawResult))
+			ps.conn.db.DestroyResult(&rawResult)
 			return nil, fmt.Errorf("failed to execute prepared statement: %s", errMsg)
 		}
+		ps.conn.db.DestroyResult(&rawResult)
 		return nil, fmt.Errorf("failed to execute prepared statement")
 	}
 

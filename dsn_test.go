@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -128,8 +129,13 @@ func TestReadOnlyRefusesAWrite(t *testing.T) {
 	if n != 1 {
 		t.Errorf("read %d rows, want 1", n)
 	}
-	if _, err := readonly.Exec("INSERT INTO t VALUES (2)"); err == nil {
-		t.Error("a read-only database accepted a write")
+	_, err = readonly.Exec("INSERT INTO t VALUES (2)")
+	if err == nil {
+		t.Fatal("a read-only database accepted a write")
+	}
+	// The caller must be able to tell a read-only refusal from a syntax error.
+	if !strings.Contains(err.Error(), "read-only") {
+		t.Errorf("the refusal does not say why: %v", err)
 	}
 }
 

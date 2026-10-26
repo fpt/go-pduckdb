@@ -22,6 +22,7 @@ func TestDB() *DB {
 		ColumnCount:   func(*DuckDBResultRaw) int64 { return 0 },
 		ColumnName:    func(*DuckDBResultRaw, int64) *byte { return nil },
 		DestroyResult: func(*DuckDBResultRaw) {},
+		ResultError:   func(*DuckDBResultRaw) *byte { return nil },
 	}
 }
 

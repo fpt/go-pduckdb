@@ -223,6 +223,26 @@ func TestColumnTypeDatabaseTypeName(t *testing.T) {
 	assert.Equal(t, "JSON", cts[3].DatabaseTypeName())
 }
 
+// TestJSONScansAsString verifies JSON, an alias of VARCHAR, decodes as string
+// like VARCHAR does, while still scanning into *[]byte.
+func TestJSONScansAsString(t *testing.T) {
+	sqlDB, err := sql.Open("duckdb", ":memory:")
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, sqlDB.Close()) }()
+
+	var v any
+	require.NoError(t, sqlDB.QueryRow(`SELECT '{"a":1}'::JSON`).Scan(&v))
+	assert.Equal(t, `{"a":1}`, v)
+
+	var b []byte
+	require.NoError(t, sqlDB.QueryRow(`SELECT '{"a":1}'::JSON`).Scan(&b))
+	assert.Equal(t, []byte(`{"a":1}`), b)
+
+	var null any
+	require.NoError(t, sqlDB.QueryRow(`SELECT NULL::JSON`).Scan(&null))
+	assert.Nil(t, null)
+}
+
 // TestNestedTypes covers recursive decoding of LIST/ARRAY/STRUCT/MAP.
 func TestNestedTypes(t *testing.T) {
 	conn := openConn(t)

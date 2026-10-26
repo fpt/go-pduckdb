@@ -18,7 +18,10 @@ func (c *Connection) Query(sql string) (*Result, error) {
 
 	state := c.db.Query(c.handle, cQuery, &rawResult)
 	if state != DuckDBSuccess {
-		return nil, fmt.Errorf("Query failed: %s", sql)
+		// The failed result still holds DuckDB's error message and must be destroyed.
+		errMsg := GoString(c.db.ResultError(&rawResult))
+		c.db.DestroyResult(&rawResult)
+		return nil, fmt.Errorf("Query failed: %s", errMsg)
 	}
 
 	internalResult := newResult(c.db, rawResult)
