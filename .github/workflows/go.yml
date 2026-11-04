@@ -42,6 +42,7 @@ jobs:
             1.*) curl -sSfL "$base/libduckdb-$platform.zip" -o archive && unzip -j archive "$lib" -d duckdb-lib ;;
             *)   curl -sSfL "$base/duckdb-shared-libs-$platform.tar.gz" -o archive && tar xzf archive -C duckdb-lib "$lib" ;;
           esac
+          sudo mkdir -p /usr/local/lib
           sudo cp "duckdb-lib/$lib" /usr/local/lib/
           if [ "$RUNNER_OS" = Linux ]; then sudo ldconfig; fi
           rm -rf archive duckdb-lib
