@@ -14,8 +14,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        # DuckDB 2.0 renamed the release assets from libduckdb-<os>-<arch>.zip
+        # to duckdb-shared-libs-<os>-<arch>.tar.gz; the install steps handle both.
+        duckdb: ['2.0.0', '1.5.6']
 
+    name: unit-tests (${{ matrix.os }}, duckdb ${{ matrix.duckdb }})
     runs-on: ${{ matrix.os }}
+    env:
+      DUCKDB_VERSION: ${{ matrix.duckdb }}
 
     steps:
       - uses: actions/checkout@v4
@@ -26,30 +32,37 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install DuckDB library (Linux)
-        if: runner.os == 'Linux'
+      - name: Install DuckDB library (Linux / macOS)
+        if: runner.os != 'Windows'
         run: |
-          curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.5.4/libduckdb-linux-amd64.zip -o archive.zip
-          sudo unzip -j archive.zip libduckdb.so -d /usr/local/lib
-          sudo ldconfig
-          rm archive.zip
-
-      - name: Install DuckDB library (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.5.4/libduckdb-osx-universal.zip -o archive.zip
-          sudo unzip -j archive.zip libduckdb.dylib -d /usr/local/lib
-          rm archive.zip
+          if [ "$RUNNER_OS" = Linux ]; then platform=linux-amd64; lib=libduckdb.so; else platform=osx-universal; lib=libduckdb.dylib; fi
+          base=https://github.com/duckdb/duckdb/releases/download/v$DUCKDB_VERSION
+          mkdir duckdb-lib
+          case "$DUCKDB_VERSION" in
+            1.*) curl -sSfL "$base/libduckdb-$platform.zip" -o archive && unzip -j archive "$lib" -d duckdb-lib ;;
+            *)   curl -sSfL "$base/duckdb-shared-libs-$platform.tar.gz" -o archive && tar xzf archive -C duckdb-lib "$lib" ;;
+          esac
+          sudo cp "duckdb-lib/$lib" /usr/local/lib/
+          if [ "$RUNNER_OS" = Linux ]; then sudo ldconfig; fi
+          rm -rf archive duckdb-lib
 
       - name: Install DuckDB library (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri https://github.com/duckdb/duckdb/releases/download/v1.5.4/libduckdb-windows-amd64.zip -OutFile archive.zip
-          Expand-Archive -Path archive.zip -DestinationPath "$env:RUNNER_TEMP\duckdb" -Force
+          $base = "https://github.com/duckdb/duckdb/releases/download/v$env:DUCKDB_VERSION"
+          $dest = "$env:RUNNER_TEMP\duckdb"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          if ($env:DUCKDB_VERSION.StartsWith("1.")) {
+            Invoke-WebRequest -Uri "$base/libduckdb-windows-amd64.zip" -OutFile archive.zip
+            Expand-Archive -Path archive.zip -DestinationPath $dest -Force
+          } else {
+            Invoke-WebRequest -Uri "$base/duckdb-shared-libs-windows-amd64.tar.gz" -OutFile archive.tar.gz
+            tar -xzf archive.tar.gz -C $dest
+          }
           # go test runs each package with its own directory as the working directory,
           # so the DLL must be resolvable via the standard DLL search path (PATH), not cwd.
-          "$env:RUNNER_TEMP\duckdb" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          $dest | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Run Unit Tests
         run: go test ./... -v

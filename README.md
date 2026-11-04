@@ -53,10 +53,10 @@ Typically, `/opt/homebrew/lib/libduckdb.dylib` is installed.
 
 ### Linux (Ubuntu/Debian)
 ```bash
-curl -sSL https://github.com/duckdb/duckdb/releases/download/v1.5.4/libduckdb-linux-amd64.zip -o archive.zip
-sudo unzip -j archive.zip libduckdb.so -d /usr/local/lib
+curl -sSL https://github.com/duckdb/duckdb/releases/download/v2.0.0/duckdb-shared-libs-linux-amd64.tar.gz -o archive.tar.gz
+sudo tar xzf archive.tar.gz -C /usr/local/lib libduckdb.so
 sudo ldconfig
-rm archive.zip
+rm archive.tar.gz
 ```
 
 You can find a download URL in [official releases of DuckDB](https://github.com/duckdb/duckdb/releases).

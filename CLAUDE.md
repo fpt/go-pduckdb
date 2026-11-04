@@ -19,7 +19,7 @@ make integ-arm64   # same, linux/arm64
 
 Run a single test: `go test -run TestName ./...`
 
-**Tests require `libduckdb` installed on the host** — they dlopen the real library (no mocks for the C API). CI installs DuckDB v1.5.4; on macOS `brew install duckdb` works. Use `DUCKDB_LIBRARY_PATH=/path/to/libduckdb.dylib` to point at a specific library. Official DuckDB Linux builds require glibc (not musl).
+**Tests require `libduckdb` installed on the host** — they dlopen the real library (no mocks for the C API). CI tests against DuckDB v2.0.0 and v1.5.6 (2.0 release assets are `duckdb-shared-libs-<os>-<arch>.tar.gz`, 1.x are `libduckdb-<os>-<arch>.zip`); on macOS `brew install duckdb` works. Use `DUCKDB_LIBRARY_PATH=/path/to/libduckdb.dylib` to point at a specific library. Official DuckDB Linux builds require glibc (not musl).
 
 ## Architecture
 
@@ -41,7 +41,7 @@ Three layers, top to bottom:
 ### Invariants to preserve
 
 - No CGO anywhere (`CGO_ENABLED=0` must keep working) — never add cgo imports.
-- purego ≥ v0.10.0 is required (struct-by-value args on Linux for `duckdb_fetch_chunk`).
+- purego ≥ v0.11.0 is required (struct-by-value args for `duckdb_fetch_chunk`); it needs Go ≥ 1.25.
 - DuckDB C objects need explicit destroy calls; results/chunks/logical types are freed via `Close()`/`Destroy*` — be careful about use-after-free when returning wrappers whose underlying result may be closed (see issue #23 for a live example of this bug class).
 - `docs/COMPATIBILITY.md` is the supported feature matrix — update it when adding types, platforms, or driver interfaces.
 
