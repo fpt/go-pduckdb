@@ -1,10 +1,10 @@
-FROM golang:1.24.2 AS builder
+FROM golang:1.25 AS builder
 
 # Add build arguments for architecture
 ARG GOARCH=amd64
 ARG LIBARCH=amd64
 
-RUN apt-get update && apt-get install -y curl unzip
+RUN apt-get update && apt-get install -y curl
 
 WORKDIR /app
 
@@ -15,9 +15,9 @@ ENV GOARCH=${GOARCH}
 
 # Download and install DuckDB library before running tests
 # NOTE: Official DuckDB builds require glibc. Not musl.
-RUN curl -sSfL https://github.com/duckdb/duckdb/releases/download/v1.5.4/libduckdb-linux-${LIBARCH}.zip -o archive.zip \
-    && unzip -j archive.zip libduckdb.so \
-    && rm archive.zip \
+RUN curl -sSfL https://github.com/duckdb/duckdb/releases/download/v2.0.0/duckdb-shared-libs-linux-${LIBARCH}.tar.gz -o archive.tar.gz \
+    && tar xzf archive.tar.gz libduckdb.so \
+    && rm archive.tar.gz \
     && cp libduckdb.so /usr/local/lib/ \
     && ldconfig
 

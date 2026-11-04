@@ -1,9 +1,9 @@
 module github.com/fpt/go-pduckdb
 
-go 1.24.2
+go 1.25.0
 
 require (
-	github.com/ebitengine/purego v0.10.1
+	github.com/ebitengine/purego v0.11.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 )

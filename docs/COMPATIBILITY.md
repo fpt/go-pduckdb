@@ -127,6 +127,6 @@ cast is needed.
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Go | ≥ 1.24 | |
+| Go | ≥ 1.25 | Required by purego v0.11 |
 | purego | ≥ v0.10.0 | v0.10.0 added struct-by-value arguments on Linux, needed for `duckdb_fetch_chunk` |
-| DuckDB shared library | v1.5.x | CI tests against v1.5.4; nearby versions generally work since the C API is stable |
+| DuckDB shared library | v2.0.x, v1.5.x | CI tests against v2.0.0 and v1.5.6; nearby versions generally work since the C API is stable |
