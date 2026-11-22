@@ -1,6 +1,6 @@
 module github.com/calvinchengx/go-pduckdb
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/ebitengine/purego v0.10.1
